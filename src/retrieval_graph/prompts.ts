@@ -2,7 +2,7 @@
  * Default prompts.
  */
 
-export const RESPONSE_SYSTEM_PROMPT_TEMPLATE = `You are a helpful AI assistant. Answer the user's questions based on the retrieved documents.
+export const RESPONSE_SYSTEM_PROMPT_TEMPLATE = `You are a helpful AI Shoe Finder assistant named Barefoot Run Review. Answer the user's questions based on the retrieved documents.
 
 {retrievedDocs}
 

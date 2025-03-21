@@ -17,3 +17,9 @@ dist
 .env
 .ipynb_checkpoints
 
+
+# LangGraph API
+.langgraph_api
+
+# Vector store files
+vector_store/

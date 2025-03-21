@@ -28,11 +28,25 @@ export const IndexConfigurationAnnotation = Annotation.Root({
 
   /**
    * The vector store provider to use for retrieval.
-   * Options are 'elastic', 'elastic-local', 'pinecone', or 'mongodb'.
+   * Options are 'elastic', 'elastic-local', 'pinecone', 'mongodb', 'local-memory', or 'local-file'.
    */
   retrieverProvider: Annotation<
-    "elastic" | "elastic-local" | "pinecone" | "mongodb"
+    "elastic" | "elastic-local" | "pinecone" | "mongodb" | "local-memory" | "local-file"
   >,
+
+  /**
+   * Paths to document files or directories for local retrievers.
+   * Only used when retrieverProvider is 'local-memory' or 'local-file'.
+   * Can be paths to individual document files or directories containing documents.
+   */
+  documentPaths: Annotation<string[]>,
+
+  /**
+   * URLs to sitemaps for content retrieval.
+   * Can be used with any retrieverProvider to fetch and index content from URLs in the sitemaps.
+   * Can be URLs to XML sitemaps.
+   */
+  sitemapUrls: Annotation<string[]>,
 
   /**
    * Additional keyword arguments to pass to the search function of the retriever.
@@ -57,7 +71,9 @@ export function ensureIndexConfiguration(
     userId: configurable.userId || "default", // Give a default user for shared docs
     embeddingModel:
       configurable.embeddingModel || "openai/text-embedding-3-small",
-    retrieverProvider: configurable.retrieverProvider || "elastic",
+    retrieverProvider: configurable.retrieverProvider || "local-memory",
+    documentPaths: configurable.documentPaths || ["/Users/nickwinder/Downloads/reviews"],
+    sitemapUrls: configurable.sitemapUrls || [],
     searchKwargs: configurable.searchKwargs || {},
   };
 }
@@ -108,9 +124,9 @@ export function ensureConfiguration(
       configurable.responseSystemPromptTemplate ||
       RESPONSE_SYSTEM_PROMPT_TEMPLATE,
     responseModel:
-      configurable.responseModel || "anthropic/claude-3-5-sonnet-20240620",
+      configurable.responseModel || "openai/gpt-4o-mini",
     querySystemPromptTemplate:
       configurable.querySystemPromptTemplate || QUERY_SYSTEM_PROMPT_TEMPLATE,
-    queryModel: configurable.queryModel || "anthropic/claude-3-haiku-20240307",
+    queryModel: configurable.queryModel || "openai/gpt-4o-mini",
   };
 }

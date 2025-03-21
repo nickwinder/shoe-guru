@@ -103,4 +103,4 @@ export const graph = builder.compile({
   interruptAfter: [],
 });
 
-graph.name = "Retrieval Graph"; // Customizes the name displayed in LangSmith
+graph.name = "Shoe Guru Graph"; // Customizes the name displayed in LangSmith
