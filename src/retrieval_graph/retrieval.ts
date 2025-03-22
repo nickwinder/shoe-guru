@@ -490,14 +490,62 @@ async function getHNSWLib(configuration: ReturnType<typeof ensureConfiguration>,
 }
 
 /**
- * Creates an HNSWLib instance for document retrieval.
+ * Creates an HNSWLib instance for document retrieval without triggering ingestion.
+ * This function only accesses the existing vector store and will fail if it doesn't exist.
  *
  * @param config - The configuration object
  * @returns An HNSWLib instance
+ * @throws Error if the vector store doesn't exist or is empty
  */
-export async function makeRetriever(
+export async function getVectorStore(
     config: RunnableConfig,
 ): Promise<HNSWLib> {
+    const configuration = ensureConfiguration(config);
+    const embeddingModel = makeTextEmbeddings(configuration.embeddingModel);
+
+    const userId = configuration.userId;
+    if (!userId) {
+        throw new Error("Please provide a valid user_id in the configuration.");
+    }
+
+    // Get the storage directory for this configuration
+    const storageDir = getLocalFilePath(configuration);
+
+    // Check if vector store exists
+    if (!fs.existsSync(path.join(storageDir, "hnswlib.index")) || 
+        !fs.existsSync(path.join(storageDir, "docstore.json"))) {
+        throw new Error("Vector store not found. Please run the ingestion script first.");
+    }
+
+    // Load the existing vector store
+    const vectorStore = await HNSWLib.load(storageDir, embeddingModel);
+
+    // Check if the vector store is empty
+    try {
+        const testQuery = await vectorStore.similaritySearch("test", 1);
+        if (testQuery.length === 0) {
+            throw new Error("Vector store is empty. Please run the ingestion script first.");
+        }
+    } catch (error: unknown) {
+        if ((error as Error).message === "Vector store is empty. Please run the ingestion script first.") {
+            throw error;
+        }
+        throw new Error(`Error accessing vector store: ${(error as Error).message}`);
+    }
+
+    return vectorStore;
+}
+
+/**
+ * Ingests documents from sitemaps and adds them to the vector store.
+ * This function should be called separately from the retriever.
+ *
+ * @param config - The configuration object
+ * @returns A promise that resolves when ingestion is complete
+ */
+export async function ingestDocuments(
+    config: RunnableConfig,
+): Promise<void> {
     const configuration = ensureConfiguration(config);
     const embeddingModel = makeTextEmbeddings(configuration.embeddingModel);
 
@@ -509,5 +557,5 @@ export async function makeRetriever(
     const vectorStore = await getHNSWLib(configuration, embeddingModel);
     await addDocumentsFromSitemaps(configuration, vectorStore, embeddingModel);
 
-    return vectorStore
+    console.log("Document ingestion completed successfully.");
 }

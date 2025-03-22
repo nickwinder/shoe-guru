@@ -2,7 +2,7 @@
   "name": "retrieval-graph",
   "version": "0.0.1",
   "description": "A starter template containing an example retrieval agent.",
-  "main": "src/retrieval_graph/graph.ts",
+  "main": "dist/retrieval_graph/graph.js",
   "author": "Your Name",
   "license": "MIT",
   "private": true,
@@ -13,7 +13,8 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=\\.test\\.ts$ --testPathIgnorePatterns=\\.int\\.test\\.ts$",
     "test:int": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=\\.int\\.test\\.ts$",
     "lint": "eslint src",
-    "format": "prettier --write agent"
+    "format": "prettier --write src",
+    "ingest": "npm run build && node dist/ingest.js"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^8.15.0",

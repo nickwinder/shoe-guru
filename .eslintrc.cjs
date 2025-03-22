@@ -35,7 +35,7 @@ module.exports = {
     "@typescript-eslint/no-misused-promises": "error",
     camelcase: 0,
     "class-methods-use-this": 0,
-    "import/extensions": [2, "ignorePackages"],
+    "import/extensions": [0, "ignorePackages"],
     "import/no-extraneous-dependencies": [
       "error",
       { devDependencies: ["**/*.test.ts"] },
