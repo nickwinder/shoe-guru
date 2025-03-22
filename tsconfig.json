@@ -16,7 +16,7 @@
     "strict": true,
     "strictFunctionTypes": false,
     "outDir": "dist",
-    "types": ["jest", "node"],
+    "types": ["jest"],
     "resolveJsonModule": true
   },
   "include": ["**/*.ts", "**/*.js"],

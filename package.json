@@ -28,6 +28,7 @@
     "@langchain/textsplitters": "^0.1.0",
     "@pinecone-database/pinecone": "^4.1.0",
     "hnswlib-node": "^1.4.2",
+    "html-to-text": "^9.0.5",
     "langchain": "^0.3.14",
     "mongodb": "^6.9.0",
     "ts-node": "^10.9.2",

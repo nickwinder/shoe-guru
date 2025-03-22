@@ -28,15 +28,12 @@ export const IndexConfigurationAnnotation = Annotation.Root({
 
   /**
    * The vector store provider to use for retrieval.
-   * Options are 'elastic', 'elastic-local', 'pinecone', 'mongodb', 'local-memory', or 'local-file'.
+   * Only 'local-file' (HNSWLib) is supported.
    */
-  retrieverProvider: Annotation<
-    "elastic" | "elastic-local" | "pinecone" | "mongodb" | "local-memory" | "local-file"
-  >,
+  retrieverProvider: Annotation<"local-file">,
 
   /**
-   * Paths to document files or directories for local retrievers.
-   * Only used when retrieverProvider is 'local-memory' or 'local-file'.
+   * Paths to document files or directories for the HNSWLib retriever.
    * Can be paths to individual document files or directories containing documents.
    */
   documentPaths: Annotation<string[]>,
@@ -53,6 +50,13 @@ export const IndexConfigurationAnnotation = Annotation.Root({
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   searchKwargs: Annotation<Record<string, any>>,
+
+  /**
+   * Weight to give to recency when ranking documents (0-1).
+   * 0 means no recency bias, 1 means only consider recency.
+   * Default is 0.3 (30% recency, 70% relevance).
+   */
+  recencyWeight: Annotation<number>,
 });
 
 /**
@@ -71,10 +75,11 @@ export function ensureIndexConfiguration(
     userId: configurable.userId || "default", // Give a default user for shared docs
     embeddingModel:
       configurable.embeddingModel || "openai/text-embedding-3-small",
-    retrieverProvider: configurable.retrieverProvider || "local-memory",
+    retrieverProvider: configurable.retrieverProvider || "local-file",
     documentPaths: configurable.documentPaths || ["/Users/nickwinder/Downloads/reviews"],
     sitemapUrls: configurable.sitemapUrls || [],
     searchKwargs: configurable.searchKwargs || {},
+    recencyWeight: configurable.recencyWeight !== undefined ? configurable.recencyWeight : 0.3,
   };
 }
 

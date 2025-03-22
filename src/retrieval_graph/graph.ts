@@ -8,7 +8,9 @@ import { StateAnnotation, InputStateAnnotation } from "./state.js";
 import { formatDocs, getMessageText, loadChatModel } from "./utils.js";
 import { z } from "zod";
 import { makeRetriever } from "./retrieval.js";
-// Define the function that calls the model
+import * as events from "node:events";
+
+events.EventEmitter.defaultMaxListeners = 1000;
 
 const SearchQuery = z.object({
   query: z.string().describe("Search the indexed documents for a query."),
@@ -50,9 +52,22 @@ async function retrieve(
   config: RunnableConfig,
 ): Promise<typeof StateAnnotation.Update> {
   const query = state.queries[state.queries.length - 1];
-  const retriever = await makeRetriever(config);
-  const response = await retriever.invoke(query);
-  return { retrievedDocs: response };
+  const configuration = ensureConfiguration(config);
+
+  // Get the HNSWLib vector store
+  const vectorStore = await makeRetriever(config);
+
+  // Perform similarity search
+  let docs = await vectorStore.similaritySearch(query, 10);
+
+  // Apply recency bias if configured
+  if (configuration.recencyWeight > 0) {
+    console.log(`Applying recency bias with weight: ${configuration.recencyWeight}`);
+    const { applyRecencyBias } = await import("./retrieval.js");
+    docs = await applyRecencyBias(docs, configuration.recencyWeight);
+  }
+
+  return { retrievedDocs: docs };
 }
 
 async function respond(

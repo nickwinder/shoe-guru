@@ -1,24 +1,80 @@
-import {Client} from "@elastic/elasticsearch";
-import {ElasticVectorSearch} from "@langchain/community/vectorstores/elasticsearch";
 import {HNSWLib} from "@langchain/community/vectorstores/hnswlib";
-import {MemoryVectorStore} from "langchain/vectorstores/memory";
 import {RunnableConfig} from "@langchain/core/runnables";
-import {VectorStoreRetriever} from "@langchain/core/vectorstores";
-import {MongoDBAtlasVectorSearch} from "@langchain/mongodb";
-import {PineconeStore} from "@langchain/pinecone";
-import {MongoClient} from "mongodb";
 import {ensureConfiguration} from "./configuration.js";
-import {Pinecone as PineconeClient} from "@pinecone-database/pinecone";
 import {Embeddings} from "@langchain/core/embeddings";
-import {CohereEmbeddings} from "@langchain/cohere";
 import {OpenAIEmbeddings} from "@langchain/openai";
 import {Document} from "@langchain/core/documents";
 import * as fs from "fs";
 import * as path from "path";
 import * as https from "https";
 import * as http from "http";
-import {DocxLoader} from "@langchain/community/document_loaders/fs/docx";
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import {RecursiveCharacterTextSplitter} from "@langchain/textsplitters";
+
+import crypto from "crypto";
+import {HtmlToTextTransformer} from "@langchain/community/document_transformers/html_to_text";
+
+/**
+ * Reranks documents based on recency, giving a boost to more recent documents.
+ *
+ * @param docs - The documents to rerank
+ * @param recencyWeight - Weight to give to recency (0-1), where 1 means recency is the only factor
+ * @returns Reranked documents with scores adjusted for recency
+ */
+function reorderDocumentsByRecency(docs: Document[], recencyWeight = 0.3): Document[] {
+    if (!docs.length || recencyWeight <= 0) return docs;
+
+    // Find the newest and oldest timestamps
+    let newestTimestamp = 0;
+    let oldestTimestamp = Date.now();
+    let hasTimestamps = false;
+
+    for (const doc of docs) {
+        const timestamp = doc.metadata.lastmod_timestamp;
+        if (timestamp) {
+            hasTimestamps = true;
+            newestTimestamp = Math.max(newestTimestamp, timestamp);
+            oldestTimestamp = Math.min(oldestTimestamp, timestamp);
+        }
+    }
+
+    // If no timestamps found or all documents have the same timestamp, return original order
+    if (!hasTimestamps || newestTimestamp === oldestTimestamp) return docs;
+
+    // Calculate a normalized recency score for each document and combine with original score
+    const timeRange = newestTimestamp - oldestTimestamp;
+
+    return [...docs].sort((a, b) => {
+        const aTimestamp = a.metadata.lastmod_timestamp || oldestTimestamp;
+        const bTimestamp = b.metadata.lastmod_timestamp || oldestTimestamp;
+
+        // Normalize timestamps to 0-1 range
+        const aRecencyScore = (aTimestamp - oldestTimestamp) / timeRange;
+        const bRecencyScore = (bTimestamp - oldestTimestamp) / timeRange;
+
+        // Get original scores if available (default to 1 if not)
+        const aOriginalScore = a.metadata.score || 1;
+        const bOriginalScore = b.metadata.score || 1;
+
+        // Combine scores with weighting
+        const aCombinedScore = (aOriginalScore * (1 - recencyWeight)) + (aRecencyScore * recencyWeight);
+        const bCombinedScore = (bOriginalScore * (1 - recencyWeight)) + (bRecencyScore * recencyWeight);
+
+        // Sort in descending order (higher scores first)
+        return bCombinedScore - aCombinedScore;
+    });
+}
+
+/**
+ * Applies recency bias to the results from HNSWLib.
+ *
+ * @param docs - The documents to rerank
+ * @param recencyWeight - Weight to give to recency (0-1)
+ * @returns A promise that resolves to an array of relevant documents, reranked by recency
+ */
+export async function applyRecencyBias(docs: Document[], recencyWeight: number): Promise<Document[]> {
+    // Apply recency bias
+    return reorderDocumentsByRecency(docs, recencyWeight);
+}
 
 /**
  * Fetches content from a URL and returns it as a string.
@@ -51,24 +107,45 @@ function fetchUrl(url: string): Promise<string> {
 }
 
 /**
- * Parses a sitemap XML and extracts URLs.
+ * Parses a sitemap XML and extracts URLs with their last modified dates.
  *
  * @param sitemapContent - The sitemap XML content as a string
- * @returns An array of URLs found in the sitemap
+ * @returns An array of objects containing URLs and their last modified dates
  */
-function parseSitemap(sitemapContent: string): string[] {
-    const urls: string[] = [];
+function parseSitemap(sitemapContent: string): Array<{ url: string, lastmod?: string }> {
+    const urlEntries: Array<{ url: string, lastmod?: string }> = [];
 
-    // Simple regex-based extraction of URLs from sitemap
-    // This handles both standard sitemaps and sitemap indexes
-    const locRegex = /<loc>(.*?)<\/loc>/g;
-    let match;
+    // Extract URL entries from the sitemap
+    const urlRegex = /<url>([\s\S]*?)<\/url>/g;
+    let urlMatch;
 
-    while ((match = locRegex.exec(sitemapContent)) !== null) {
-        urls.push(match[1]);
+    while ((urlMatch = urlRegex.exec(sitemapContent)) !== null) {
+        const urlEntry = urlMatch[1];
+
+        // Extract the URL (loc)
+        const locMatch = /<loc>(.*?)<\/loc>/i.exec(urlEntry);
+        if (!locMatch) continue;
+
+        const url = locMatch[1];
+
+        // Extract the last modified date if available
+        const lastmodMatch = /<lastmod>(.*?)<\/lastmod>/i.exec(urlEntry);
+        const lastmod = lastmodMatch ? lastmodMatch[1] : undefined;
+
+        urlEntries.push({url, lastmod});
     }
 
-    return urls;
+    // If no URL entries were found, try extracting from sitemap index
+    if (urlEntries.length === 0) {
+        const locRegex = /<loc>(.*?)<\/loc>/g;
+        let match;
+
+        while ((match = locRegex.exec(sitemapContent)) !== null) {
+            urlEntries.push({url: match[1]});
+        }
+    }
+
+    return urlEntries;
 }
 
 /**
@@ -76,255 +153,72 @@ function parseSitemap(sitemapContent: string): string[] {
  *
  * @param url - The URL to fetch
  * @param userId - User ID to associate with the document
+ * @param lastmod - Optional last modified date from the sitemap
  * @returns A promise that resolves to an array of Document objects with the chunked URL content
  */
-async function fetchUrlContent(url: string, userId: string): Promise<Document[]> {
+async function fetchUrlContent(url: string, userId: string, lastmod?: string): Promise<Document[]> {
     try {
         const content = await fetchUrl(url);
 
-        // Create a simple text splitter for chunking
-        const textSplitter = new RecursiveCharacterTextSplitter({
-            chunkSize: 1000,
-            chunkOverlap: 200,
-        });
+        const splitter = RecursiveCharacterTextSplitter.fromLanguage("html");
+        const transformer = new HtmlToTextTransformer();
 
         // Extract a simple title from the URL
         const title = url.split('/').pop() || url;
 
+        // Create a hash from the URL and last modified date
+        const hashInput = lastmod ? `${url}:${lastmod}` : url;
+        const contentHash = crypto
+            .createHash('md5')
+            .update(hashInput)
+            .digest('hex');
+
+        // Create metadata object with lastmod if available
+        const metadata: Record<string, any> = {
+            source: url,
+            title: title,
+            user_id: userId,
+            content_hash: contentHash,
+        };
+
+        // Add lastmod to metadata if available
+        if (lastmod) {
+            metadata.lastmod = lastmod;
+            // Convert to timestamp for easier comparison in retrievers
+            try {
+                metadata.lastmod_timestamp = new Date(lastmod).getTime();
+            } catch (e) {
+                console.warn(`Could not parse lastmod date: ${lastmod}`);
+            }
+        }
+
         // Create an initial document with the content
         const doc = new Document({
             pageContent: content,
-            metadata: {
-                source: url,
-                title: title,
-                user_id: userId,
-            },
+            metadata,
         });
 
-        // Split the document into chunks
-        const chunkedDocs = await textSplitter.splitDocuments([doc]);
+        const sequence = splitter.pipe(transformer);
 
         // Return the chunked documents
-        return chunkedDocs;
+        return await sequence.invoke([doc]);
     } catch (error) {
         console.error(`Error fetching URL ${url}:`, error);
         throw error;
     }
 }
 
-/**
- * Loads a DOCX file, chunks it, and converts it to Document objects.
- *
- * @param filePath - Path to the DOCX file
- * @param userId - User ID to associate with the document
- * @returns An array of Document objects with the chunked DOCX content
- */
-async function loadDocxFile(filePath: string, userId: string): Promise<Document[]> {
-    try {
-        // Check if the file exists before trying to read it
-        if (!fs.existsSync(filePath)) {
-            throw new Error(`DOCX file does not exist: ${filePath}`);
-        }
-
-        // Use LangChain's DocxLoader to load the document
-        const loader = new DocxLoader(filePath);
-        const docs = await loader.load();
-
-        // Create a text splitter for chunking
-        const textSplitter = new RecursiveCharacterTextSplitter({
-            chunkSize: 1000,
-            chunkOverlap: 200,
-        });
-
-        // Split the document into chunks
-        const chunkedDocs = await textSplitter.splitDocuments(docs);
-
-        // Add user_id and other metadata to each document
-        return chunkedDocs.map(doc => {
-            return new Document({
-                pageContent: doc.pageContent,
-                metadata: {
-                    ...doc.metadata,
-                    title: path.basename(filePath, path.extname(filePath)),
-                    user_id: userId,
-                },
-            });
-        });
-    } catch (error) {
-        console.error(`Error loading DOCX file ${filePath}:`, error);
-        throw error;
-    }
-}
-
-/**
- * Processes a directory and returns all supported document files in it.
- *
- * @param dirPath - Path to the directory
- * @returns Array of paths to supported document files
- */
-function getDocumentFilesFromDirectory(dirPath: string): string[] {
-    try {
-        if (!fs.existsSync(dirPath)) {
-            throw new Error(`Directory does not exist: ${dirPath}`);
-        }
-
-        if (!fs.statSync(dirPath).isDirectory()) {
-            throw new Error(`Path is not a directory: ${dirPath}`);
-        }
-
-        // List of supported file extensions
-        const supportedExtensions = ['.docx'];
-
-        const files = fs.readdirSync(dirPath);
-        return files
-            .filter(file => {
-                const extension = path.extname(file).toLowerCase();
-                return supportedExtensions.includes(extension);
-            })
-            .map(file => path.join(dirPath, file));
-    } catch (error) {
-        console.error(`Error processing directory ${dirPath}:`, error);
-        throw error;
-    }
-}
-
-/**
- * Creates a memory vector store retriever from document files.
- *
- * @param configuration - Configuration object
- * @param embeddingModel - Embedding model to use
- * @returns A VectorStoreRetriever for the memory vector store
- */
-async function makeLocalMemoryRetriever(
-    configuration: ReturnType<typeof ensureConfiguration>,
-    embeddingModel: Embeddings,
-): Promise<VectorStoreRetriever> {
-    const {documentPaths, userId} = configuration;
-
-    if (!documentPaths || documentPaths.length === 0) {
-        throw new Error("No document paths provided for local memory retriever");
-    }
-
-    // Load all document files
-    const documents: Document[] = [];
-    const filesToProcess: string[] = [];
-
-    // Process each path (could be a file or directory)
-    for (const docPath of documentPaths) {
-        try {
-            // Check if the path exists
-            if (!fs.existsSync(docPath)) {
-                console.warn(`Path does not exist: ${docPath}`);
-                continue;
-            }
-
-            // Check if the path is a directory
-            if (fs.statSync(docPath).isDirectory()) {
-                // Get all supported document files from the directory
-                const documentFiles = getDocumentFilesFromDirectory(docPath);
-                filesToProcess.push(...documentFiles);
-            } else {
-                // It's a file, add it to the list
-                filesToProcess.push(docPath);
-            }
-        } catch (error) {
-            console.error(`Error processing path ${docPath}:`, error);
-            // Continue with other paths even if one fails
-        }
-    }
-
-    // Process all files
-    for (const filePath of filesToProcess) {
-        try {
-            const extension = path.extname(filePath).toLowerCase();
-
-            if (extension === '.docx') {
-                const docxDocuments = await loadDocxFile(filePath, userId);
-                documents.push(...docxDocuments);
-            } else {
-                console.warn(`Unsupported file type: ${filePath}`);
-                continue;
-            }
-        } catch (error) {
-            console.error(`Error loading file ${filePath}:`, error);
-            // Continue with other files even if one fails
-        }
-    }
-
-    if (documents.length === 0) {
-        console.warn("No documents were successfully loaded from the provided paths");
-        // Create an empty memory vector store
-        const vectorStore = new MemoryVectorStore(embeddingModel);
-
-        const searchKwargs = configuration.searchKwargs || {};
-        const filter: Record<string, unknown> = {
-            ...searchKwargs,
-            user_id: configuration.userId,
-        };
-
-        return vectorStore.asRetriever({
-            filter: (doc) => {
-                for (const key in filter) {
-                    if (doc.metadata[key] !== filter[key]) {
-                        return false;
-                    }
-                }
-                return true
-            }
-        });
-    }
-
-    // Create a memory vector store from the documents
-    const vectorStore = await MemoryVectorStore.fromDocuments(
-        documents,
-        embeddingModel
-    );
-
-    const searchKwargs = configuration.searchKwargs || {};
-    const filter: Record<string, unknown> = {
-        ...searchKwargs,
-        user_id: configuration.userId,
-    };
-
-    return vectorStore.asRetriever({
-        filter: (doc) => {
-            for (const key in filter) {
-                if (doc.metadata[key] !== filter[key]) {
-                    return false;
-                }
-            }
-            return true
-        }
-    });
-}
-
-/**
- * Creates a file-based vector store retriever from document files using HNSWLib.
- *
- * @param configuration - Configuration object
- * @param embeddingModel - Embedding model to use
- * @returns A VectorStoreRetriever for the file-based vector store
- */
-async function makeLocalFileRetriever(
-    configuration: ReturnType<typeof ensureConfiguration>,
-    embeddingModel: Embeddings,
-): Promise<VectorStoreRetriever> {
-    const {documentPaths, userId, embeddingModel: embeddingModelName, sitemapUrls} = configuration;
-
-    if (!documentPaths || documentPaths.length === 0) {
-        throw new Error("No document paths provided for local file retriever");
-    }
+function getLocalFilePath(configuration: ReturnType<typeof ensureConfiguration>): string {
+    const {userId, embeddingModel: embeddingModelName, sitemapUrls} = configuration;
 
     // Create a deterministic name for the vector store based on configuration
     // Sort arrays to ensure consistent order regardless of input order
-    const sortedDocPaths = [...documentPaths].sort();
     const sortedSitemapUrls = [...(sitemapUrls || [])].sort();
 
     // Create a configuration hash for naming
-    const configHash = require('crypto')
+    const configHash = crypto
         .createHash('md5')
         .update(JSON.stringify({
-            documentPaths: sortedDocPaths,
             embeddingModel: embeddingModelName,
             sitemapUrls: sortedSitemapUrls
         }))
@@ -338,7 +232,36 @@ async function makeLocalFileRetriever(
     }
 
     // Create specific directory for this configuration
-    const storageDir = path.join(userBaseDir, configHash);
+    return path.join(userBaseDir, configHash);
+}
+
+/**
+ * Creates or loads a file-based HNSWLib vector store.
+ *
+ * @param configuration - Configuration object
+ * @param embeddingModel - Embedding model to use
+ * @returns An HNSWLib vector store instance
+ */
+async function getOrCreateHNSWLib(
+    configuration: ReturnType<typeof ensureConfiguration>,
+    embeddingModel: Embeddings
+): Promise<HNSWLib> {
+    const {embeddingModel: embeddingModelName, sitemapUrls} = configuration;
+
+    const sortedSitemapUrls = [...(sitemapUrls || [])].sort();
+    // Create a configuration hash for naming
+    const configHash = crypto
+        .createHash('md5')
+        .update(JSON.stringify({
+            embeddingModel: embeddingModelName,
+            sitemapUrls: sortedSitemapUrls
+        }))
+        .digest('hex')
+        .substring(0, 10); // Use first 10 chars for brevity
+
+
+    // Create specific directory for this configuration
+    const storageDir = getLocalFilePath(configuration)
     if (!fs.existsSync(storageDir)) {
         fs.mkdirSync(storageDir, {recursive: true});
     }
@@ -346,7 +269,6 @@ async function makeLocalFileRetriever(
     // Create a config file to track what configuration created this vector store
     const configFilePath = path.join(storageDir, 'config.json');
     const configData = {
-        documentPaths: sortedDocPaths,
         embeddingModel: embeddingModelName,
         sitemapUrls: sortedSitemapUrls,
         created: new Date().toISOString()
@@ -358,7 +280,7 @@ async function makeLocalFileRetriever(
         try {
             const existingConfig = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
             // Compare only the relevant parts of the configuration
-            const existingConfigHash = require('crypto')
+            const existingConfigHash = crypto
                 .createHash('md5')
                 .update(JSON.stringify({
                     documentPaths: existingConfig.documentPaths,
@@ -389,255 +311,154 @@ async function makeLocalFileRetriever(
     // Write the current configuration to the config file
     fs.writeFileSync(configFilePath, JSON.stringify(configData, null, 2));
 
-    // Load all document files
-    const documents: Document[] = [];
-    const filesToProcess: string[] = [];
-
-    // Process each path (could be a file or directory)
-    for (const docPath of documentPaths) {
-        try {
-            // Check if the path exists
-            if (!fs.existsSync(docPath)) {
-                console.warn(`Path does not exist: ${docPath}`);
-                continue;
-            }
-
-            // Check if the path is a directory
-            if (fs.statSync(docPath).isDirectory()) {
-                // Get all supported document files from the directory
-                const documentFiles = getDocumentFilesFromDirectory(docPath);
-                filesToProcess.push(...documentFiles);
-            } else {
-                // It's a file, add it to the list
-                filesToProcess.push(docPath);
-            }
-        } catch (error) {
-            console.error(`Error processing path ${docPath}:`, error);
-            // Continue with other paths even if one fails
-        }
-    }
-
-    // Process all files
-    for (const filePath of filesToProcess) {
-        try {
-            const extension = path.extname(filePath).toLowerCase();
-
-            if (extension === '.docx') {
-                const docxDocuments = await loadDocxFile(filePath, userId);
-                documents.push(...docxDocuments);
-            } else {
-                console.warn(`Unsupported file type: ${filePath}`);
-                continue;
-            }
-        } catch (error) {
-            console.error(`Error loading file ${filePath}:`, error);
-            // Continue with other files even if one fails
-        }
-    }
-
     let vectorStore: HNSWLib;
-
-    // Check if we have an existing index and configuration hasn't changed
-    if (fs.existsSync(path.join(storageDir, "hnswlib.index")) && !configChanged) {
-        console.log(`Loading existing vector store from ${storageDir}`);
-        // Load the existing vector store
+    if (fs.existsSync(path.join(storageDir, "hnswlib.index"))) {
         vectorStore = await HNSWLib.load(storageDir, embeddingModel);
-
-        // Add new documents if any
-        if (documents.length > 0) {
-            console.log(`Adding ${documents.length} new documents to existing vector store`);
-            await vectorStore.addDocuments(documents);
-            // Save the updated vector store
-            await vectorStore.save(storageDir);
+        if (configChanged) {
+            console.log(`Configuration changed, creating new vector store`);
+            await vectorStore.delete({directory: storageDir})
         }
     } else {
-        // Either no existing index or configuration has changed
-        if (documents.length === 0) {
-            console.warn("No documents were successfully loaded from the provided paths");
-            // Create an empty HNSWLib vector store
-            vectorStore = new HNSWLib(embeddingModel, {
-                space: "cosine",
-                numDimensions: 1536, // Default for OpenAI embeddings
-            });
-        } else {
-            // Create a new HNSWLib vector store from the documents
-            if (configChanged) {
-                console.log(`Configuration changed, creating new vector store with ${documents.length} documents`);
-            } else {
-                console.log(`Creating new vector store with ${documents.length} documents`);
-            }
-            vectorStore = await HNSWLib.fromDocuments(documents, embeddingModel);
-            // Save the vector store
-            await vectorStore.save(storageDir);
-        }
+        // Create a memory vector store from the documents
+        vectorStore = await HNSWLib.fromDocuments(
+            [{pageContent: "dummy", metadata: {}}],
+            embeddingModel
+        );
+        await vectorStore.save(storageDir);
     }
 
-    const searchKwargs = configuration.searchKwargs || {};
-    const filter: Record<string, unknown> = {
-        ...searchKwargs,
-        user_id: configuration.userId,
-    };
-
-    return vectorStore.asRetriever({
-        filter: (doc) => {
-            for (const key in filter) {
-                if (doc.metadata[key] !== filter[key]) {
-                    return false;
-                }
-            }
-            return true
-        }
-    });
+    return vectorStore;
 }
 
-async function makeElasticRetriever(
-    configuration: ReturnType<typeof ensureConfiguration>,
-    embeddingModel: Embeddings,
-): Promise<VectorStoreRetriever> {
-    const elasticUrl = process.env.ELASTICSEARCH_URL;
-    if (!elasticUrl) {
-        throw new Error("ELASTICSEARCH_URL environment variable is not defined");
-    }
-
-    let auth: { username: string; password: string } | { apiKey: string };
-    if (configuration.retrieverProvider === "elastic-local") {
-        const username = process.env.ELASTICSEARCH_USER;
-        const password = process.env.ELASTICSEARCH_PASSWORD;
-        if (!username || !password) {
-            throw new Error(
-                "ELASTICSEARCH_USER or ELASTICSEARCH_PASSWORD environment variable is not defined",
-            );
-        }
-        auth = {username, password};
-    } else {
-        const apiKey = process.env.ELASTICSEARCH_API_KEY;
-        if (!apiKey) {
-            throw new Error(
-                "ELASTICSEARCH_API_KEY environment variable is not defined",
-            );
-        }
-        auth = {apiKey};
-    }
-
-    const client = new Client({
-        node: elasticUrl,
-        auth,
-    });
-
-    const vectorStore = new ElasticVectorSearch(embeddingModel, {
-        client,
-        indexName: "langchain_index",
-    });
-    const searchKwargs = configuration.searchKwargs || {};
-    const filter = {
-        ...searchKwargs,
-        user_id: configuration.userId,
-    };
-
-    return vectorStore.asRetriever({filter});
-}
-
-async function makePineconeRetriever(
-    configuration: ReturnType<typeof ensureConfiguration>,
-    embeddingModel: Embeddings,
-): Promise<VectorStoreRetriever> {
-    const indexName = process.env.PINECONE_INDEX_NAME;
-    if (!indexName) {
-        throw new Error("PINECONE_INDEX_NAME environment variable is not defined");
-    }
-    const pinecone = new PineconeClient();
-    const pineconeIndex = pinecone.Index(indexName!);
-    const vectorStore = await PineconeStore.fromExistingIndex(embeddingModel, {
-        pineconeIndex,
-    });
-
-    const searchKwargs = configuration.searchKwargs || {};
-    const filter = {
-        ...searchKwargs,
-        user_id: configuration.userId,
-    };
-
-    return vectorStore.asRetriever({filter});
-}
-
-async function makeMongoDBRetriever(
-    configuration: ReturnType<typeof ensureConfiguration>,
-    embeddingModel: Embeddings,
-): Promise<VectorStoreRetriever> {
-    if (!process.env.MONGODB_URI) {
-        throw new Error("MONGODB_URI environment variable is not defined");
-    }
-    const client = new MongoClient(process.env.MONGODB_URI);
-    const namespace = `langgraph_retrieval_agent.${configuration.userId}`;
-    const [dbName, collectionName] = namespace.split(".");
-    const collection = client.db(dbName).collection(collectionName);
-    const vectorStore = new MongoDBAtlasVectorSearch(embeddingModel, {
-        collection: collection,
-        textKey: "text",
-        embeddingKey: "embedding",
-        indexName: "vector_index",
-    });
-    const searchKwargs = {...configuration.searchKwargs};
-    searchKwargs.preFilter = {
-        ...searchKwargs.preFilter,
-        user_id: {$eq: configuration.userId},
-    };
-    return vectorStore.asRetriever({filter: searchKwargs});
-}
 
 /**
- * Fetches documents from sitemap URLs.
+ * Fetches documents from sitemap URLs and adds them to the HNSWLib vector store.
  *
- * @param sitemapUrls - Array of sitemap URLs
- * @param userId - User ID to associate with the documents
- * @returns A promise that resolves to an array of Document objects
+ * @param configuration - Configuration object
+ * @param vectorStore - The vector store to add documents to
+ * @param embeddingModel - The embedding model to use
+ * @returns A promise that resolves when all documents have been processed
  */
-async function fetchDocumentsFromSitemaps(
-    sitemapUrls: string[],
-    userId: string
-): Promise<Document[]> {
-    if (!sitemapUrls || sitemapUrls.length === 0) {
-        return [];
+async function addDocumentsFromSitemaps(
+    configuration: ReturnType<typeof ensureConfiguration>,
+    vectorStore: HNSWLib,
+    embeddingModel: Embeddings,
+): Promise<void> {
+    if (!configuration.sitemapUrls || configuration.sitemapUrls.length === 0) {
+        return;
     }
 
-    const documents: Document[] = [];
+    // Get the storage directory for this configuration
+    const storageDir = getLocalFilePath(configuration);
+    const sitemapMetadataPath = path.join(storageDir, 'sitemap_metadata.json');
+
+    // Load existing sitemap metadata if available
+    let sitemapMetadata: Record<string, { lastModified: string, lastIngestionDate: string }> = {};
+    if (fs.existsSync(sitemapMetadataPath)) {
+        try {
+            sitemapMetadata = JSON.parse(fs.readFileSync(sitemapMetadataPath, 'utf8'));
+        } catch (error) {
+            console.warn('Error reading sitemap metadata, will recreate:', error);
+        }
+    }
 
     // Process each sitemap URL
-    for (const sitemapUrl of sitemapUrls) {
+    for (const sitemapUrl of configuration.sitemapUrls) {
         try {
-            console.log(`Processing sitemap: ${sitemapUrl}`);
+            console.log(`Checking sitemap: ${sitemapUrl}`);
 
             // Fetch the sitemap content
             const sitemapContent = await fetchUrl(sitemapUrl);
 
-            // Parse the sitemap to extract URLs
-            const urls = parseSitemap(sitemapContent);
-            console.log(`Found ${urls.length} URLs in sitemap: ${sitemapUrl}`);
+            // Calculate a hash of the sitemap content to detect changes
+            const sitemapHash = crypto
+                .createHash('md5')
+                .update(sitemapContent)
+                .digest('hex');
 
-            // Process each URL in the sitemap
-            for (const url of urls) {
-                try {
-                    console.log(`Processing URL: ${url}`);
+            const currentDate = new Date().toISOString();
 
-                    // Fetch and process the URL content
-                    const urlDocuments = await fetchUrlContent(url, userId);
-
-                    // Add the documents to our collection
-                    documents.push(...urlDocuments);
-
-                    console.log(`Added ${urlDocuments.length} documents from URL: ${url}`);
-                } catch (error) {
-                    console.error(`Error processing URL ${url}:`, error);
-                    // Continue with other URLs even if one fails
-                }
+            // Check if we've processed this sitemap before and if it has changed
+            if (sitemapMetadata[sitemapUrl] && 
+                sitemapMetadata[sitemapUrl].lastModified === sitemapHash) {
+                console.log(`Sitemap ${sitemapUrl} hasn't changed since last ingestion on ${sitemapMetadata[sitemapUrl].lastIngestionDate}. Skipping processing.`);
+                continue;
             }
+
+            console.log(`Processing sitemap: ${sitemapUrl} - content has changed or first time processing`);
+
+            // Parse the sitemap to extract URLs and lastmod dates
+            const urlEntries = parseSitemap(sitemapContent);
+            console.log(`Found ${urlEntries.length} URLs in sitemap: ${sitemapUrl}`);
+
+            // Process all URL entries in the sitemap concurrently
+            await Promise.all(
+                urlEntries.map(async (entry) => {
+                    try {
+                        // Create a hash from the URL and last modified date
+                        const hashInput = entry.lastmod ? `${entry.url}:${entry.lastmod}` : entry.url;
+                        const urlHash = crypto
+                            .createHash('md5')
+                            .update(hashInput)
+                            .digest('hex');
+
+                        // Check if a document with the same hash already exists in the vector store
+                        let skipUrl = false;
+                        try {
+                            // Use the vectorStore to check if any documents with this hash exist
+                            const existingDocs = await vectorStore.asRetriever(1, (doc) => {
+                                return doc.metadata.content_hash === urlHash;
+                            }).invoke('');
+
+                            if (existingDocs.length > 0) {
+                                console.log(`Skipping URL: ${entry.url} - document with same hash already exists in vector store`);
+                                skipUrl = true;
+                            }
+                        } catch (error) {
+                            console.warn(`Error checking for existing document: ${error}. Will process URL.`);
+                        }
+
+                        if (skipUrl) {
+                            return;
+                        }
+
+                        console.log(`Processing URL: ${entry.url}${entry.lastmod ? ` (Last modified: ${entry.lastmod})` : ''}`);
+
+                        // Fetch and process the URL content, passing the lastmod if available
+                        const urlDocuments = await fetchUrlContent(entry.url, configuration.userId, entry.lastmod).then((docs) => docs.filter(doc => doc.pageContent));
+
+                        if (urlDocuments.length > 0) {
+                            // Get the vector store and add documents
+                            const vectorStore = await getHNSWLib(configuration, embeddingModel);
+                            await vectorStore.addDocuments(urlDocuments);
+
+                            // Always save after adding documents
+                            console.log(`Saving vector store to local storage`);
+                            await vectorStore.save(storageDir);
+                        }
+
+                        console.log(`Added ${urlDocuments.length} documents from URL: ${entry.url}`);
+                    } catch (error) {
+                        console.error(`Error processing URL ${entry.url}:`, error);
+                        // Continue with other URLs even if one fails
+                    }
+                })
+            );
+
+            // Update the metadata for this sitemap
+            sitemapMetadata[sitemapUrl] = {
+                lastModified: sitemapHash,
+                lastIngestionDate: currentDate
+            };
+
+            // Save the updated metadata
+            fs.writeFileSync(sitemapMetadataPath, JSON.stringify(sitemapMetadata, null, 2));
+
         } catch (error) {
             console.error(`Error processing sitemap ${sitemapUrl}:`, error);
             // Continue with other sitemaps even if one fails
         }
     }
-
-    return documents;
 }
 
 function makeTextEmbeddings(modelName: string): Embeddings {
@@ -656,16 +477,27 @@ function makeTextEmbeddings(modelName: string): Embeddings {
     switch (provider) {
         case "openai":
             return new OpenAIEmbeddings({model});
-        case "cohere":
-            return new CohereEmbeddings({model});
         default:
             throw new Error(`Unsupported embedding provider: ${provider}`);
     }
 }
 
+/**
+ * Gets an HNSWLib instance with the specified configuration and filter.
+ */
+async function getHNSWLib(configuration: ReturnType<typeof ensureConfiguration>, embeddingModel: Embeddings): Promise<HNSWLib> {
+    return getOrCreateHNSWLib(configuration, embeddingModel);
+}
+
+/**
+ * Creates an HNSWLib instance for document retrieval.
+ *
+ * @param config - The configuration object
+ * @returns An HNSWLib instance
+ */
 export async function makeRetriever(
     config: RunnableConfig,
-): Promise<VectorStoreRetriever> {
+): Promise<HNSWLib> {
     const configuration = ensureConfiguration(config);
     const embeddingModel = makeTextEmbeddings(configuration.embeddingModel);
 
@@ -674,40 +506,8 @@ export async function makeRetriever(
         throw new Error("Please provide a valid user_id in the configuration.");
     }
 
-    // Check if we have sitemap URLs to process
-    const sitemapDocuments = await fetchDocumentsFromSitemaps(configuration.sitemapUrls, userId);
+    const vectorStore = await getHNSWLib(configuration, embeddingModel);
+    await addDocumentsFromSitemaps(configuration, vectorStore, embeddingModel);
 
-    // Create the retriever based on the provider
-    let retriever: VectorStoreRetriever;
-
-    switch (configuration.retrieverProvider) {
-        case "elastic":
-        case "elastic-local":
-            retriever = await makeElasticRetriever(configuration, embeddingModel);
-            break;
-        case "pinecone":
-            retriever = await makePineconeRetriever(configuration, embeddingModel);
-            break;
-        case "mongodb":
-            retriever = await makeMongoDBRetriever(configuration, embeddingModel);
-            break;
-        case "local-memory":
-            retriever = await makeLocalMemoryRetriever(configuration, embeddingModel);
-            break;
-        case "local-file":
-            retriever = await makeLocalFileRetriever(configuration, embeddingModel);
-            break;
-        default:
-            throw new Error(
-                `Unrecognized retrieverProvider in configuration: ${configuration.retrieverProvider}`,
-            );
-    }
-
-    // Add documents from sitemaps if any
-    if (sitemapDocuments.length > 0) {
-        console.log(`Adding ${sitemapDocuments.length} documents from sitemaps to the retriever`);
-        await retriever.addDocuments(sitemapDocuments);
-    }
-
-    return retriever;
+    return vectorStore
 }
