@@ -53,17 +53,27 @@ model ShoeReview {
 
 model ShoeVersion {
   id            Int       @id @default(autoincrement())
-  imageIds      Int[]
-  gender        String
   shoeId        Int
   name          String
   previousModel String?
   changes       String?
   releaseDate   DateTime?
 
-  shoe Shoe @relation(fields: [shoeId], references: [id], onDelete: Cascade)
+  shoe       Shoe         @relation(fields: [shoeId], references: [id], onDelete: Cascade)
+  ShoeGender ShoeGender[]
 
-  @@unique([shoeId, name, gender], name: "id_name_gender")
+  @@unique([shoeId, name], name: "id_name")
+}
+
+model ShoeGender {
+  id        Int    @id @default(autoincrement())
+  versionId Int
+  gender    String
+  imageIds  Int[]
+
+  version ShoeVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, gender], name: "id_gender")
 }
 
 model Image {

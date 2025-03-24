@@ -236,20 +236,13 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
             const versionName = version.name ? version.name : '1';
 
             // Parse the release date string to a Date object if it exists
-            const parsedReleaseDate = releaseDate ? (() => {
-                try {
-                    return new Date(releaseDate);
-                } catch {
-                    return undefined;
-                }
-            })() : undefined;
+            const parsedReleaseDate = releaseDate && !isNaN(Date.parse(releaseDate)) ? new Date(releaseDate) : null;
 
-            await prisma.shoeVersion.upsert({
+            const versionDB = await prisma.shoeVersion.upsert({
                 where: {
-                    id_name_gender: {
+                    id_name: {
                         shoeId: shoe.id,
                         name: versionName,
-                        gender
                     }
                 },
                 update: {
@@ -260,12 +253,25 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
                 create: {
                     shoeId: shoe.id,
                     name: versionName,
-                    gender,
                     previousModel,
                     changes,
                     releaseDate: parsedReleaseDate,
                 },
             });
+
+            await prisma.shoeGender.upsert({
+                where: {
+                    id_gender: {
+                        versionId: versionDB.id,
+                        gender,
+                    }
+                },
+                update: {},
+                create: {
+                    versionId: versionDB.id,
+                    gender,
+                }
+            })
 
             console.log(`Saved version information for shoe: ${shoe.id}`);
         }
