@@ -1,7 +1,7 @@
-import {extractShoeDataFromBrandSite, parseSitemap} from "./shoe-scraper-no-db";
 import axios from "axios";
 import {describe, expect, it} from "vitest";
-import { convert } from 'html-to-text'
+import {convert} from 'html-to-text'
+import {extractShoeDataFromBrandSite, parseSitemap} from "src/db/shoe-scraper";
 
 describe("Shoe Scraper", () => {
     // This test uses real HTTP requests to test against the actual sitemap
@@ -96,16 +96,6 @@ describe("Shoe Scraper", () => {
                     console.log(`  - Previous Model: ${superiorShoe.version.previousModel}`);
                     console.log(`  - Changes: ${superiorShoe.version.changes}`);
                     console.log(`  - Release Date: ${superiorShoe.version.releaseDate}`);
-                }
-
-                if (superiorShoe.reviews && superiorShoe.reviews.length > 0) {
-                    console.log('- Reviews:');
-                    superiorShoe.reviews.forEach((review, index) => {
-                        console.log(`  - Review ${index + 1}:`);
-                        console.log(`    - Fit: ${review.fit}`);
-                        console.log(`    - Feel: ${review.feel}`);
-                        console.log(`    - Durability: ${review.durability}`);
-                    });
                 }
             }
         }

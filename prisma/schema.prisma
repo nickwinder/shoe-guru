@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Shoe {
+  id            Int           @id @default(autoincrement())
+  model         String
+  brand         String
+  intendedUse   String?      // e.g., "road", "trail", "race"
+  price         Decimal?     
+  trueToSize    Boolean?     
+  createdAt     DateTime     @default(now())
+
+  specs         ShoeSpec?
+  reviews       ShoeReview[]
+  versions      ShoeVersion[]
+}
+
+model ShoeSpec {
+  id              Int     @id @default(autoincrement())
+  shoeId          Int     @unique
+  weightGrams     Int?
+  stackHeightMm   Int?
+  heelToToeDropMm Int?
+  width           String?  // e.g., "narrow", "standard", "wide"
+  depth           String?  // e.g., "low", "medium", "high"
+
+  shoe            Shoe     @relation(fields: [shoeId], references: [id], onDelete: Cascade)
+}
+
+model ShoeReview {
+  id        Int     @id @default(autoincrement())
+  shoeId    Int
+  fit       String?
+  feel      String?
+  durability String?
+
+  shoe      Shoe    @relation(fields: [shoeId], references: [id], onDelete: Cascade)
+}
+
+model ShoeVersion {
+  id            Int      @id @default(autoincrement())
+  shoeId        Int
+  previousModel String?
+  changes       String?
+  releaseDate   DateTime?
+
+  shoe          Shoe     @relation(fields: [shoeId], references: [id], onDelete: Cascade)
+}
