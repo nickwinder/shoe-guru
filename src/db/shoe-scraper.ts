@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 
 // Define schema for shoe data extraction
 const BrandShoeDataSchema = z.object({
-    model: z.string().describe("The model name of the shoe. This should not include the gender the shoe is made for, nor the version number."),
+    model: z.string().describe("The model name of the shoe. This should not include the gender the shoe is made for, nor the version number or model type like mid or luxe."),
     brand: z.string().describe("The brand name of the shoe"),
     price: z.number().nullable().describe("The price of the shoe in numeric format (no currency symbol)"),
     trueToSize: z.string().nullable().describe("Whether the shoe is true to size. Or fits small, or large."),
@@ -25,6 +25,7 @@ const BrandShoeDataSchema = z.object({
     }),
     version: z.object({
         name: z.string().describe("The version name of the shoe (e.g., '2', '3', '4.5', 'Mid', 'Waterproof')"),
+        gender: z.enum(['male', 'female', 'none']).describe('The gender the shoe is made for'),
         previousModel: z.string().nullable().describe("The previous model name of the shoe"),
         changes: z.string().nullable().describe("The changes made from the previous model"),
         releaseDate: z.string().nullable().describe("The release date of the shoe in ISO format (YYYY-MM-DD)")
@@ -39,7 +40,7 @@ const BrandShoeDataSchema = z.object({
  */
 export async function extractShoeDataFromBrandSite(
     html: string,
-    modelName = 'openai/gpt-4o-mini'
+    modelName = 'openai/gpt-4o'
 ): Promise<z.infer<typeof BrandShoeDataSchema>> {
     console.log(`Extracting shoe data using LLM model: ${modelName}...`);
 
@@ -56,7 +57,7 @@ export async function extractShoeDataFromBrandSite(
 Your task is to analyze the HTML and identify all shoes present, extracting their details according to the specified schema.
 
 For each shoe, extract:
-1. Model name - This should not include the gender the shoe is made for
+1. Model name (without the version number or type like mid or waterproof)
 2. Brand name
 3. Price (as a number without currency symbols)
 4. True to size (boolean indicating if the shoe fits true to size)
@@ -69,6 +70,7 @@ For each shoe, extract:
    - Depth (e.g., low, medium, high)
 7. Version information:
    - Version name (e.g '2', '3', '4.5', 'Mid', 'Waterproof')
+   - Gender (male, female, or none)
    - Previous model name (if available)
    - Changes from previous model (if available)
    - Release date (in YYYY-MM-DD format) (if available)
@@ -230,15 +232,25 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
             }
 
             // Save version information if available
-            const {previousModel, changes, releaseDate} = version;
+            const {previousModel, changes, releaseDate, gender} = version;
             const versionName = version.name ? version.name : '1';
 
             // Parse the release date string to a Date object if it exists
-            const parsedReleaseDate = releaseDate ? new Date(releaseDate) : undefined;
+            const parsedReleaseDate = releaseDate ? (() => {
+                try {
+                    return new Date(releaseDate);
+                } catch {
+                    return undefined;
+                }
+            })() : undefined;
 
             await prisma.shoeVersion.upsert({
                 where: {
-                    name: versionName,
+                    id_name_gender: {
+                        shoeId: shoe.id,
+                        name: versionName,
+                        gender
+                    }
                 },
                 update: {
                     previousModel,
@@ -248,6 +260,7 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
                 create: {
                     shoeId: shoe.id,
                     name: versionName,
+                    gender,
                     previousModel,
                     changes,
                     releaseDate: parsedReleaseDate,
@@ -297,7 +310,7 @@ async function main() {
     ];
 
     // Parse the sitemap to get product pages
-    const pages = await parseSitemap(sitemapUrl, productUrlPatterns).then(pages => pages.slice(0, 1));
+    const pages = await parseSitemap(sitemapUrl, productUrlPatterns).then(pages => pages.slice(4,5));
 
     if (pages.length === 0) {
         console.warn('No product pages found in sitemap. Using default example pages.');

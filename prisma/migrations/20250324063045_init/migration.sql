@@ -39,6 +39,7 @@ CREATE TABLE "ShoeReview" (
 CREATE TABLE "ShoeVersion" (
     "id" SERIAL NOT NULL,
     "imageIds" INTEGER[],
+    "gender" TEXT NOT NULL,
     "shoeId" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
     "previousModel" TEXT,
@@ -64,7 +65,7 @@ CREATE UNIQUE INDEX "Shoe_model_brand_key" ON "Shoe"("model", "brand");
 CREATE UNIQUE INDEX "ShoeSpec_shoeId_key" ON "ShoeSpec"("shoeId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ShoeVersion_name_key" ON "ShoeVersion"("name");
+CREATE UNIQUE INDEX "ShoeVersion_shoeId_name_gender_key" ON "ShoeVersion"("shoeId", "name", "gender");
 
 -- AddForeignKey
 ALTER TABLE "ShoeSpec" ADD CONSTRAINT "ShoeSpec_shoeId_fkey" FOREIGN KEY ("shoeId") REFERENCES "Shoe"("id") ON DELETE CASCADE ON UPDATE CASCADE;

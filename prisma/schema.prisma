@@ -54,6 +54,7 @@ model ShoeReview {
 model ShoeVersion {
   id            Int       @id @default(autoincrement())
   imageIds      Int[]
+  gender        String
   shoeId        Int
   name          String
   previousModel String?
@@ -62,7 +63,7 @@ model ShoeVersion {
 
   shoe Shoe @relation(fields: [shoeId], references: [id], onDelete: Cascade)
 
-  @@unique([name])
+  @@unique([shoeId, name, gender], name: "id_name_gender")
 }
 
 model Image {
