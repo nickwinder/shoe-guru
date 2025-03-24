@@ -14,17 +14,19 @@ datasource db {
 }
 
 model Shoe {
-  id            Int           @id @default(autoincrement())
-  model         String
-  brand         String
-  intendedUse   String?      // e.g., "road", "trail", "race"
-  price         Decimal?     
-  trueToSize    Boolean?     
-  createdAt     DateTime     @default(now())
+  id          Int      @id @default(autoincrement())
+  model       String
+  brand       String
+  intendedUse String? // e.g., "road", "trail", "race"
+  price       Decimal?
+  trueToSize  String? // e.g. "true", "small", "large"
+  createdAt   DateTime @default(now())
 
-  specs         ShoeSpec?
-  reviews       ShoeReview[]
-  versions      ShoeVersion[]
+  specs    ShoeSpec?
+  reviews  ShoeReview[]
+  versions ShoeVersion[]
+
+  @@unique([model, brand], name: "model_brand")
 }
 
 model ShoeSpec {
@@ -33,28 +35,38 @@ model ShoeSpec {
   weightGrams     Int?
   stackHeightMm   Int?
   heelToToeDropMm Int?
-  width           String?  // e.g., "narrow", "standard", "wide"
-  depth           String?  // e.g., "low", "medium", "high"
+  width           String? // e.g., "narrow", "standard", "wide"
+  depth           String? // e.g., "low", "medium", "high"
 
-  shoe            Shoe     @relation(fields: [shoeId], references: [id], onDelete: Cascade)
+  shoe Shoe @relation(fields: [shoeId], references: [id], onDelete: Cascade)
 }
 
 model ShoeReview {
-  id        Int     @id @default(autoincrement())
-  shoeId    Int
-  fit       String?
-  feel      String?
+  id         Int     @id @default(autoincrement())
+  shoeId     Int
+  fit        String?
+  feel       String?
   durability String?
 
-  shoe      Shoe    @relation(fields: [shoeId], references: [id], onDelete: Cascade)
+  shoe Shoe @relation(fields: [shoeId], references: [id], onDelete: Cascade)
 }
 
 model ShoeVersion {
-  id            Int      @id @default(autoincrement())
+  id            Int       @id @default(autoincrement())
+  imageIds      Int[]
   shoeId        Int
+  name          String
   previousModel String?
   changes       String?
   releaseDate   DateTime?
 
-  shoe          Shoe     @relation(fields: [shoeId], references: [id], onDelete: Cascade)
+  shoe Shoe @relation(fields: [shoeId], references: [id], onDelete: Cascade)
+
+  @@unique([name])
+}
+
+model Image {
+  id   Int    @id @default(autoincrement())
+  name String
+  data Bytes
 }

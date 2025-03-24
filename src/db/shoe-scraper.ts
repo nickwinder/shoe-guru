@@ -2,7 +2,7 @@ import axios from 'axios';
 import {PrismaClient} from '@prisma/client';
 import {initializeDatabase} from './init-db';
 import {z} from 'zod';
-import {loadChatModel} from "src/retrieval_graph/utils";
+import {loadChatModel} from "../retrieval_graph/utils";
 import Sitemapper from "sitemapper";
 import {convert} from "html-to-text";
 
@@ -11,10 +11,10 @@ const prisma = new PrismaClient();
 
 // Define schema for shoe data extraction
 const BrandShoeDataSchema = z.object({
-    model: z.string().describe("The model name of the shoe"),
+    model: z.string().describe("The model name of the shoe. This should not include the gender the shoe is made for, nor the version number."),
     brand: z.string().describe("The brand name of the shoe"),
     price: z.number().nullable().describe("The price of the shoe in numeric format (no currency symbol)"),
-    trueToSize: z.boolean().nullable().describe("Whether the shoe is true to size"),
+    trueToSize: z.string().nullable().describe("Whether the shoe is true to size. Or fits small, or large."),
     intendedUse: z.string().describe('The intended use of the shoe e.g. road, trail'),
     specifications: z.object({
         weightGrams: z.number().nullable().describe("The weight of the shoe in grams"),
@@ -24,10 +24,11 @@ const BrandShoeDataSchema = z.object({
         depth: z.string().nullable().describe("The depth of the shoe (e.g., low, medium, high)")
     }),
     version: z.object({
+        name: z.string().describe("The version name of the shoe (e.g., '2', '3', '4.5', 'Mid', 'Waterproof')"),
         previousModel: z.string().nullable().describe("The previous model name of the shoe"),
         changes: z.string().nullable().describe("The changes made from the previous model"),
         releaseDate: z.string().nullable().describe("The release date of the shoe in ISO format (YYYY-MM-DD)")
-    }).nullable().describe("Version information for the shoe")
+    }).describe("Version information for the shoe")
 });
 
 /**
@@ -55,7 +56,7 @@ export async function extractShoeDataFromBrandSite(
 Your task is to analyze the HTML and identify all shoes present, extracting their details according to the specified schema.
 
 For each shoe, extract:
-1. Model name
+1. Model name - This should not include the gender the shoe is made for
 2. Brand name
 3. Price (as a number without currency symbols)
 4. True to size (boolean indicating if the shoe fits true to size)
@@ -66,10 +67,11 @@ For each shoe, extract:
    - Heel-to-toe drop in millimeters
    - Width (e.g., narrow, standard, wide)
    - Depth (e.g., low, medium, high)
-7. Version information (if available):
-   - Previous model name
-   - Changes from previous model
-   - Release date (in YYYY-MM-DD format)
+7. Version information:
+   - Version name (e.g '2', '3', '4.5', 'Mid', 'Waterproof')
+   - Previous model name (if available)
+   - Changes from previous model (if available)
+   - Release date (in YYYY-MM-DD format) (if available)
 
 Be thorough and extract all shoes present in the HTML. If a piece of information is not available, return null for that field.
 
@@ -177,13 +179,9 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
             // Create or update the shoe in the database
             const shoe = await prisma.shoe.upsert({
                 where: {
-                    // Since we don't have a unique constraint, we'll use a combination of fields
-                    // In a real application, you might want to add a unique constraint
-                    id: 0, // This will always fail the where clause, forcing an insert
+                    model_brand: {model, brand},
                 },
                 update: {
-                    model,
-                    brand,
                     intendedUse,
                     price: price !== null ? price : null,
                     trueToSize: trueToSize !== null ? trueToSize : null,
@@ -232,25 +230,31 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
             }
 
             // Save version information if available
-            if (version) {
-                const {previousModel, changes, releaseDate} = version;
+            const {previousModel, changes, releaseDate} = version;
+            const versionName = version.name ? version.name : '1';
 
-                if (previousModel || changes || releaseDate) {
-                    // Parse the release date string to a Date object if it exists
-                    const parsedReleaseDate = releaseDate ? new Date(releaseDate) : null;
+            // Parse the release date string to a Date object if it exists
+            const parsedReleaseDate = releaseDate ? new Date(releaseDate) : undefined;
 
-                    await prisma.shoeVersion.create({
-                        data: {
-                            shoeId: shoe.id,
-                            previousModel,
-                            changes,
-                            releaseDate: parsedReleaseDate,
-                        },
-                    });
+            await prisma.shoeVersion.upsert({
+                where: {
+                    name: versionName,
+                },
+                update: {
+                    previousModel,
+                    changes,
+                    releaseDate: parsedReleaseDate,
+                },
+                create: {
+                    shoeId: shoe.id,
+                    name: versionName,
+                    previousModel,
+                    changes,
+                    releaseDate: parsedReleaseDate,
+                },
+            });
 
-                    console.log(`Saved version information for shoe: ${shoe.id}`);
-                }
-            }
+            console.log(`Saved version information for shoe: ${shoe.id}`);
         }
 
         console.log('Shoe data scraping completed successfully');
@@ -271,7 +275,7 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
  *
  * @param sitemapUrl Optional URL of the sitemap to parse. If not provided, uses default example pages.
  */
-async function main(sitemapUrl?: string) {
+async function main() {
     // First initialize the database
     const dbInit = await initializeDatabase();
 
@@ -279,35 +283,32 @@ async function main(sitemapUrl?: string) {
         console.error('Database initialization failed, cannot proceed with scraping');
         process.exit(1);
     }
+    const sitemapUrl = "https://www.altrarunning.com/sitemap_0.xml";
 
     // If a sitemap URL is provided, parse it to get product pages
-    if (sitemapUrl) {
-        console.log(`Using sitemap: ${sitemapUrl}`);
+    console.log(`Using sitemap: ${sitemapUrl}`);
 
-        // Define patterns to identify product pages and their types
-        const productUrlPatterns = [
-            {pattern: /\/running-shoes\//, type: 'running'},
-            {pattern: /\/trail-shoes\//, type: 'trail'},
-            {pattern: /\/hiking-boots\//, type: 'hiking'},
-            // Add more patterns as needed
-        ];
+    // Define patterns to identify product pages and their types
 
-        // Parse the sitemap to get product pages
-        const pages = await parseSitemap(sitemapUrl, productUrlPatterns);
+    // Define patterns to identify product pages and their types
+    const productUrlPatterns = [
+        {pattern: /\/trail\//, type: 'trail'},
+        {pattern: /\/road\//, type: 'road'},
+    ];
 
-        if (pages.length === 0) {
-            console.warn('No product pages found in sitemap. Using default example pages.');
-        }
+    // Parse the sitemap to get product pages
+    const pages = await parseSitemap(sitemapUrl, productUrlPatterns).then(pages => pages.slice(0, 1));
 
-        // Then scrape the data from the identified pages
-        const scrapeResult = await scrapeShoeData(pages);
+    if (pages.length === 0) {
+        console.warn('No product pages found in sitemap. Using default example pages.');
+    }
 
-        if (!scrapeResult.success) {
-            console.error('Shoe data scraping failed');
-            process.exit(1);
-        }
-    } else {
-        console.log('No sitemap URL provided. Using default example pages.');
+    // Then scrape the data from the identified pages
+    const scrapeResult = await scrapeShoeData(pages);
+
+    if (!scrapeResult.success) {
+        console.error('Shoe data scraping failed');
+        process.exit(1);
     }
 
     console.log('All operations completed successfully');
@@ -315,10 +316,7 @@ async function main(sitemapUrl?: string) {
 
 // Run the main function if this script is executed directly
 if (require.main === module) {
-    // You can provide a sitemap URL as a command-line argument
-    const sitemapUrl = process.argv[2];
-
-    main(sitemapUrl)
+    main()
         .catch((error) => {
             console.error('Unhandled error:', error);
             process.exit(1);

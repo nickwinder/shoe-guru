@@ -20,9 +20,9 @@ async function initializeDatabase() {
     console.log('Database initialization complete');
     
     return { success: true, message: 'Database initialized successfully' };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error initializing database:', error);
-    return { success: false, message: `Database initialization failed: ${error.message}` };
+    return { success: false, message: `Database initialization failed: ${(error as Error).message}` };
   } finally {
     await prisma.$disconnect();
   }
