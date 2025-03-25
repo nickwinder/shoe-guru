@@ -23,3 +23,5 @@ dist
 
 # Vector store files
 vector_store/
+
+.next

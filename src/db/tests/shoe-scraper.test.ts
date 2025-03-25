@@ -61,15 +61,15 @@ describe("Shoe Scraper", () => {
                 }
 
                 // Verify price if available
-                if (superiorShoe.price !== null) {
-                    expect(typeof superiorShoe.price).toBe('number');
-                    expect(superiorShoe.price).toBeGreaterThan(0);
+                if (superiorShoe.version.price !== null) {
+                    expect(typeof superiorShoe.version.price).toBe('number');
+                    expect(superiorShoe.version.price).toBeGreaterThan(0);
                 }
 
                 // Verify weight if available
-                if (superiorShoe.specifications.weightGrams !== null) {
-                    expect(typeof superiorShoe.specifications.weightGrams).toBe('number');
-                    expect(superiorShoe.specifications.weightGrams).toBeGreaterThan(0);
+                if (superiorShoe.version.weightGrams !== null) {
+                    expect(typeof superiorShoe.version.weightGrams).toBe('number');
+                    expect(superiorShoe.version.weightGrams).toBeGreaterThan(0);
                 }
 
                 // Verify stack height if available
@@ -82,10 +82,10 @@ describe("Shoe Scraper", () => {
                 console.log('Extracted Altra Superior 6 data:');
                 console.log(`- Brand: ${superiorShoe.brand}`);
                 console.log(`- Model: ${superiorShoe.model}`);
-                console.log(`- Price: ${superiorShoe.price}`);
-                console.log(`- True to Size: ${superiorShoe.trueToSize}`);
+                console.log(`- Price: ${superiorShoe.version.price}`);
+                console.log(`- True to Size: ${superiorShoe.version.trueToSize}`);
                 console.log('- Specifications:');
-                console.log(`  - Weight: ${superiorShoe.specifications.weightGrams} grams`);
+                console.log(`  - Weight: ${superiorShoe.version.weightGrams} grams`);
                 console.log(`  - Stack Height: ${superiorShoe.specifications.stackHeightMm} mm`);
                 console.log(`  - Heel-to-Toe Drop: ${superiorShoe.specifications.heelToToeDropMm} mm`);
                 console.log(`  - Width: ${superiorShoe.specifications.width}`);
