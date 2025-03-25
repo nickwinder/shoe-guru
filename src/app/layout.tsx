@@ -4,7 +4,7 @@ import './globals.css';
 import Copyright from './components/Copyright';
 
 export const metadata = {
-  title: 'Shoe Guru',
+  title: 'Wide Toe Box',
   description: 'Browse and search for running shoes',
 };
 
@@ -20,23 +20,9 @@ export default function RootLayout({
           <div className="container mx-auto px-4 py-4 flex justify-between items-center">
             <Link href="/" className="flex items-center gap-2">
               <span className="text-2xl font-display font-bold text-primary-600">
-                Shoe<span className="text-secondary-600">Guru</span>
+                Wide<span className="text-secondary-600">ToeBox</span>
               </span>
             </Link>
-            <nav className="hidden md:flex items-center gap-6">
-              <Link href="/shoes" className="font-medium text-neutral-700 hover:text-primary-600 transition-colors">
-                All Shoes
-              </Link>
-              <Link href="#" className="font-medium text-neutral-700 hover:text-primary-600 transition-colors">
-                Brands
-              </Link>
-              <Link href="#" className="font-medium text-neutral-700 hover:text-primary-600 transition-colors">
-                Categories
-              </Link>
-              <Link href="#" className="btn btn-primary">
-                Ask Guru
-              </Link>
-            </nav>
             <button className="md:hidden text-neutral-700">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-6 h-6">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -53,8 +39,8 @@ export default function RootLayout({
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div>
-                <h3 className="text-xl font-bold mb-4">Shoe<span className="text-primary-400">Guru</span></h3>
-                <p className="text-neutral-300 mb-4">Your expert guide to finding the perfect running shoes for your needs.</p>
+                <h3 className="text-xl font-bold mb-4">Wide<span className="text-primary-400">ToeBox</span></h3>
+                <p className="text-neutral-300 mb-4">Your specialized resource for finding the perfect wide toe box running shoes.</p>
                 <div className="flex gap-4">
                   <a href="#" className="text-white hover:text-primary-400 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-6 h-6">
@@ -80,7 +66,7 @@ export default function RootLayout({
               <div>
                 <h4 className="text-lg font-semibold mb-4">Contact</h4>
                 <p className="text-neutral-300 mb-2">Have questions? We're here to help!</p>
-                <a href="mailto:info@shoeguru.com" className="text-primary-400 hover:text-primary-300 transition-colors">info@shoeguru.com</a>
+                <a href="mailto:info@widetoebox.com" className="text-primary-400 hover:text-primary-300 transition-colors">info@widetoebox.com</a>
               </div>
             </div>
             <div className="border-t border-neutral-700 mt-8 pt-8 text-center text-neutral-400">

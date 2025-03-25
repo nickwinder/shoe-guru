@@ -1,69 +1,126 @@
-import {PrismaClient} from '@prisma/client';
+"use client";
+
 import Link from 'next/link';
-import SearchForm from './search-form';
-import ViewAllButton from './view-all-button';
+import AskExpertForm from './ask-an-expert';
+import { useState, useEffect } from 'react';
 
-export default async function ShoesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ query?: string }>;
-}) {
-    const resolvedParams = await searchParams;
-    const query = resolvedParams?.query || '';
+// Function to fetch shoes data from the server
+async function getShoes() {
+  try {
+    const response = await fetch('/api/shoes');
+    if (!response.ok) {
+      throw new Error('Failed to fetch shoes');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching shoes:', error);
+    return [];
+  }
+}
 
-  const prisma = new PrismaClient();
+export default function ShoesPage() {
+  const [shoes, setShoes] = useState([]);
+  const [sortOption, setSortOption] = useState('Name (A-Z)');
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch shoes with their specs and versions
-  const shoes = await prisma.shoe.findMany({
-    where: query
-      ? {
-          OR: [
-            { model: { contains: query, mode: 'insensitive' } },
-            { brand: { contains: query, mode: 'insensitive' } },
-            { versions: { some: { intendedUse: { contains: query, mode: 'insensitive' } } } },
-          ],
-        }
-      : undefined,
-    include: {
-      specs: true,
-      versions: {
-        include: {
-          ShoeGender: true,
-        }
-      },
-    },
-    orderBy: {
-      model: 'asc',
-    },
-  });
+  useEffect(() => {
+    async function loadShoes() {
+      try {
+        const shoesData = await getShoes();
+        setShoes(shoesData);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error loading shoes:", error);
+        setIsLoading(false);
+      }
+    }
+
+    loadShoes();
+  }, []);
+
+  // Function to sort shoes based on selected option
+  const sortShoes = (option) => {
+    const shoesCopy = [...shoes];
+
+    switch(option) {
+      case 'Name (A-Z)':
+        shoesCopy.sort((a, b) => a.model.localeCompare(b.model));
+        break;
+      case 'Newest':
+        // Assuming newer shoes have higher IDs or there's a createdAt field
+        shoesCopy.sort((a, b) => b.id - a.id);
+        break;
+      case 'Price: Low to High':
+        shoesCopy.sort((a, b) => {
+          const priceA = a.versions[0]?.ShoeGender[0]?.price || 0;
+          const priceB = b.versions[0]?.ShoeGender[0]?.price || 0;
+          return priceA - priceB;
+        });
+        break;
+      case 'Price: High to Low':
+        shoesCopy.sort((a, b) => {
+          const priceA = a.versions[0]?.ShoeGender[0]?.price || 0;
+          const priceB = b.versions[0]?.ShoeGender[0]?.price || 0;
+          return priceB - priceA;
+        });
+        break;
+      default:
+        break;
+    }
+
+    setShoes(shoesCopy);
+  };
+
+  // Handle sort option change
+  const handleSortChange = (e) => {
+    const option = e.target.value;
+    setSortOption(option);
+    sortShoes(option);
+  };
+
+  if (isLoading) {
+    return <div className="min-h-[80vh] flex justify-center items-center">
+      <p className="text-lg">Loading shoes...</p>
+    </div>;
+  }
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Running Shoes</h1>
-        <p className="text-neutral-600">Find your perfect running companion</p>
-      </div>
+      {/* Expert form centered in the viewport */}
+      <div className="min-h-[80vh] flex flex-col justify-center items-center mb-8">
+        <div className="bg-white rounded-xl shadow-sm p-6 w-full max-w-3xl">
+          <AskExpertForm />
+        </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-        <SearchForm initialQuery={query} />
+        {/* Scroll indicator */}
+        <div className="mt-8 text-center animate-bounce">
+          <p className="text-neutral-600 mb-2">Scroll to see all shoes</p>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mx-auto text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </div>
       </div>
 
       {shoes.length === 0 ? (
         <div className="bg-primary-50 border border-primary-200 rounded-lg p-6 text-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-primary-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14a7 7 0 01-5.468-2.632 1 1 0 00-1.564 0A7 7 0 017 14a1 1 0 00-1 1v3a1 1 0 001 1h12a1 1 0 001-1v-3a1 1 0 00-1-1z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 12a3 3 0 100-6 3 3 0 000 6z" />
           </svg>
-          <h3 className="text-xl font-semibold mb-2">No shoes found</h3>
-          <p className="text-neutral-600">Try a different search term or browse all shoes.</p>
-          <ViewAllButton />
+          <h3 className="text-xl font-semibold mb-2">No shoes available</h3>
+          <p className="text-neutral-600">Our shoe catalog is currently empty. Please check back later.</p>
         </div>
       ) : (
         <>
           <div className="flex justify-between items-center mb-4">
-            <p className="text-neutral-600">{shoes.length} shoes found</p>
+            <h3 className="text-xl font-semibold">All Shoes</h3>
             <div className="flex gap-2">
               <span className="text-sm text-neutral-500">Sort by:</span>
-              <select className="text-sm border-none bg-transparent text-neutral-700 font-medium focus:ring-0">
+              <select 
+                value={sortOption}
+                onChange={handleSortChange}
+                className="text-sm border-none bg-transparent text-neutral-700 font-medium focus:ring-0"
+              >
                 <option>Name (A-Z)</option>
                 <option>Newest</option>
                 <option>Price: Low to High</option>
@@ -80,7 +137,7 @@ export default async function ShoesPage({
                     <h2 className="text-2xl font-semibold">{shoe.brand} {shoe.model}</h2>
                     {shoe.versions[0]?.ShoeGender[0]?.price && (
                       <span className="bg-primary-100 text-primary-800 px-3 py-1 rounded-full text-sm font-medium">
-                        ${shoe.versions[0].ShoeGender[0].price.toString()}
+                        ${shoe.versions[0]?.ShoeGender[0]?.price.toString()}
                       </span>
                     )}
                   </div>
@@ -92,7 +149,7 @@ export default async function ShoesPage({
                       {shoe.versions[0]?.ShoeGender[0]?.weightGrams !== null && (
                         <div className="text-center">
                           <span className="block text-sm text-neutral-500">Weight</span>
-                          <span className="font-medium">{shoe.versions[0].ShoeGender[0].weightGrams}g</span>
+                          <span className="font-medium">{shoe.versions[0]?.ShoeGender[0]?.weightGrams}g</span>
                         </div>
                       )}
                       {shoe.specs.stackHeightMm !== null && (

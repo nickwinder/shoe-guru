@@ -1,4 +1,4 @@
-# Shoe Guru Web App
+# Wide Toe Box Web App
 
 A Next.js web application for browsing and searching running shoes.
 
@@ -28,7 +28,7 @@ pnpm install
 3. Set up your environment variables in `.env`:
 
 ```
-DATABASE_URL="postgresql://username:password@localhost:5432/shoe_guru"
+DATABASE_URL="postgresql://username:password@localhost:5432/wide_toe_box"
 ```
 
 4. Generate Prisma client:

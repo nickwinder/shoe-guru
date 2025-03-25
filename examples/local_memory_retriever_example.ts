@@ -1,7 +1,7 @@
 import { graph } from "../src/retrieval_graph/graph.js";
 
 /**
- * Example of using the local memory store retriever with the Shoe Guru graph.
+ * Example of using the local memory store retriever with the Wide Toe Box graph.
  * 
  * This example shows how to configure the graph to use the local memory store retriever
  * and load document files (DOCX) from directories at runtime.

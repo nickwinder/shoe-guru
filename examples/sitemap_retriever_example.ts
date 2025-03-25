@@ -1,7 +1,7 @@
 import { graph } from "../src/retrieval_graph/graph.js";
 
 /**
- * Example of using sitemap URLs with the Shoe Guru graph.
+ * Example of using sitemap URLs with the Wide Toe Box graph.
  * 
  * This example shows how to configure the graph to use sitemap URLs
  * to fetch and index content from URLs in a sitemap at runtime.

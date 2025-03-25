@@ -115,4 +115,4 @@ export const graph = builder.compile({
     interruptAfter: [],
 });
 
-graph.name = "Shoe Guru Graph"; // Customizes the name displayed in LangSmith
+graph.name = "Wide Toe Box Graph"; // Customizes the name displayed in LangSmith
