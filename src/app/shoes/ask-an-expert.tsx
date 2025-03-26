@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { graph } from '../../retrieval_graph/graph';
+import {HumanMessage} from "@langchain/core/messages";
+import {getMessageText} from "../../retrieval_graph/utils";
 
 export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: string }) {
   const [query, setQuery] = useState(initialQuery);
@@ -16,32 +19,21 @@ export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: st
     setResponse('');
 
     try {
-      // Simulate a delay to mimic the API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Create a user message with the query
+      const userMessage = new HumanMessage(query)
 
-      // Stub response based on the query
-      let expertResponse = "I'm a stubbed shoe expert response. This is a placeholder that doesn't make actual LLM or graph calls.";
+      // Invoke the graph with the user message
+      const result = await graph.invoke({ 
+        messages: [userMessage]
+      });
 
-      // Add some conditional responses for demo purposes
-      if (query.toLowerCase().includes("highest stack height zero drop")) {
-        expertResponse = "The Altra Olympus 5 is one of the highest stack height zero drop shoes available, with a 33mm stack height while maintaining a zero drop platform. Other options include the Altra Paradigm 6 and the Topo Athletic Ultraventure 3.";
-      } else if (query.toLowerCase().includes("widest trail shoe")) {
-        expertResponse = "The Altra Lone Peak 7 and Topo Athletic Ultraventure 3 are among the widest trail shoes available, both featuring a wide toe box. The New Balance Fresh Foam More Trail v2 also comes in wide and extra-wide options for trail runners.";
-      } else if (query.toLowerCase().includes("flat feet")) {
-        expertResponse = "For flat feet runners, shoes with good stability features are recommended. The Brooks Adrenaline GTS 22, ASICS Gel-Kayano 29, and New Balance Fresh Foam 860v13 provide excellent support for overpronation often associated with flat feet.";
-      } else if (query.toLowerCase().includes("cushioned") || query.toLowerCase().includes("long distance")) {
-        expertResponse = "The most cushioned shoes for long distance running include the HOKA Bondi 8 with its maximum cushioning, the New Balance Fresh Foam More v4, and the Brooks Glycerin 20. These shoes provide excellent impact absorption for high mileage.";
-      } else if (query.toLowerCase().includes("grip") || query.toLowerCase().includes("wet trail")) {
-        expertResponse = "For the best grip in wet trail conditions, look for shoes with aggressive lugs and sticky rubber compounds. The Salomon Speedcross 6, Inov-8 Mudclaw G 260, and La Sportiva Bushido II excel in muddy and wet conditions with their superior traction.";
-      } else if (query.toLowerCase().includes("running")) {
-        expertResponse = "Running shoes should provide good cushioning and support for your specific gait. They typically last 300-500 miles before needing replacement.";
-      } else if (query.toLowerCase().includes("size")) {
-        expertResponse = "For proper shoe sizing, measure your feet in the evening when they're at their largest. Leave about a thumb's width of space between your longest toe and the end of the shoe.";
-      } else if (query.toLowerCase().includes("barefoot")) {
-        expertResponse = "Barefoot or minimalist shoes have little to no cushioning and a zero drop from heel to toe. They're designed to mimic natural foot movement and strengthen foot muscles.";
-      }
+      // Extract the assistant's response from the result
+      // The response is the last message in the messages array
+      const messages = result.messages;
+      const assistantResponse = messages[messages.length - 1];
 
-      setResponse(expertResponse);
+      // Set the response text
+      setResponse(getMessageText(assistantResponse));
     } catch (error) {
       console.error("Error asking the expert:", error);
       setResponse("Sorry, I couldn't get an answer at this time. Please try again later.");
