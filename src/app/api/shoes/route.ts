@@ -9,24 +9,24 @@ export async function GET(request: Request) {
 
     const prisma = new PrismaClient();
 
-    // Fetch shoes with their specs and versions
+    // Fetch shoes with their gender information
     const shoes = await prisma.shoe.findMany({
       where: query
         ? {
             OR: [
               { model: { contains: query, mode: 'insensitive' } },
               { brand: { contains: query, mode: 'insensitive' } },
-              { versions: { some: { intendedUse: { contains: query, mode: 'insensitive' } } } },
+              { intendedUse: { contains: query, mode: 'insensitive' } },
             ],
           }
         : undefined,
       include: {
-        specs: true,
-        versions: {
-          include: {
-            ShoeGender: true,
-          },
+        ShoeGender: {
+          where: {
+            gender: 'male',
+          }
         },
+        reviews: true,
       },
       orderBy: {
         model: 'asc',

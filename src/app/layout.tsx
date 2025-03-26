@@ -20,7 +20,7 @@ export default function RootLayout({
           <div className="container mx-auto px-4 py-4 flex justify-between items-center">
             <Link href="/" className="flex items-center gap-2">
               <span className="text-2xl font-display font-bold text-primary-600">
-                Wide<span className="text-secondary-600">ToeBox</span>
+                Wide<span className="text-black">ToeBox</span>
               </span>
             </Link>
             <button className="md:hidden text-neutral-700">
@@ -37,9 +37,9 @@ export default function RootLayout({
 
         <footer className="bg-neutral-800 text-white py-12">
           <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
-                <h3 className="text-xl font-bold mb-4">Wide<span className="text-primary-400">ToeBox</span></h3>
+                <h3 className="text-xl font-bold mb-4">Wide<span className="text-white">ToeBox</span></h3>
                 <p className="text-neutral-300 mb-4">Your specialized resource for finding the perfect wide toe box running shoes.</p>
                 <div className="flex gap-4">
                   <a href="#" className="text-white hover:text-primary-400 transition-colors">
@@ -53,15 +53,6 @@ export default function RootLayout({
                     </svg>
                   </a>
                 </div>
-              </div>
-              <div>
-                <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
-                <ul className="space-y-2">
-                  <li><Link href="/shoes" className="text-neutral-300 hover:text-white transition-colors">All Shoes</Link></li>
-                  <li><Link href="#" className="text-neutral-300 hover:text-white transition-colors">Popular Brands</Link></li>
-                  <li><Link href="#" className="text-neutral-300 hover:text-white transition-colors">Running Guides</Link></li>
-                  <li><Link href="#" className="text-neutral-300 hover:text-white transition-colors">About Us</Link></li>
-                </ul>
               </div>
               <div>
                 <h4 className="text-lg font-semibold mb-4">Contact</h4>

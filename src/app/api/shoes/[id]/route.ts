@@ -21,13 +21,8 @@ export async function GET(
     const shoe = await prisma.shoe.findUnique({
       where: { id },
       include: {
-        specs: true,
-        versions: {
-          include: {
-            ShoeGender: true,
-            reviews: true,
-          },
-        },
+        ShoeGender: true,
+        reviews: true,
       },
     });
 

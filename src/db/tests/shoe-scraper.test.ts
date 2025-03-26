@@ -43,7 +43,7 @@ describe("Shoe Scraper", () => {
             const html = convert(response.data)
 
             // Step 4: Extract shoe data using the real LLM-based extraction
-            const superiorShoe = await extractShoeDataFromBrandSite(html);
+            const superiorShoe = await extractShoeDataFromBrandSite(superiorPage.url, html);
 
             expect(superiorShoe).toBeDefined();
 

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import AskExpertForm from './ask-an-expert';
 import { useState, useEffect } from 'react';
+import { Shoe, ShoeGender } from 'node_modules/@prisma/client/default';
 
 // Function to fetch shoes data from the server
 async function getShoes() {
@@ -19,7 +20,7 @@ async function getShoes() {
 }
 
 export default function ShoesPage() {
-  const [shoes, setShoes] = useState([]);
+  const [shoes, setShoes] = useState<(Shoe & { ShoeGender: ShoeGender[] })[]>([]);
   const [sortOption, setSortOption] = useState('Name (A-Z)');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -39,7 +40,7 @@ export default function ShoesPage() {
   }, []);
 
   // Function to sort shoes based on selected option
-  const sortShoes = (option) => {
+  const sortShoes = (option: string) => {
     const shoesCopy = [...shoes];
 
     switch(option) {
@@ -52,15 +53,15 @@ export default function ShoesPage() {
         break;
       case 'Price: Low to High':
         shoesCopy.sort((a, b) => {
-          const priceA = a.versions[0]?.ShoeGender[0]?.price || 0;
-          const priceB = b.versions[0]?.ShoeGender[0]?.price || 0;
+          const priceA = a.ShoeGender[0]?.price?.toNumber() || 0;
+          const priceB = b.ShoeGender[0]?.price?.toNumber() || 0;
           return priceA - priceB;
         });
         break;
       case 'Price: High to Low':
         shoesCopy.sort((a, b) => {
-          const priceA = a.versions[0]?.ShoeGender[0]?.price || 0;
-          const priceB = b.versions[0]?.ShoeGender[0]?.price || 0;
+          const priceA = a.ShoeGender[0]?.price?.toNumber() || 0;
+          const priceB = b.ShoeGender[0]?.price?.toNumber() || 0;
           return priceB - priceA;
         });
         break;
@@ -72,7 +73,7 @@ export default function ShoesPage() {
   };
 
   // Handle sort option change
-  const handleSortChange = (e) => {
+  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const option = e.target.value;
     setSortOption(option);
     sortShoes(option);
@@ -135,55 +136,45 @@ export default function ShoesPage() {
                 <div className="flex-1">
                   <div className="flex justify-between items-start mb-2">
                     <h2 className="text-2xl font-semibold">{shoe.brand} {shoe.model}</h2>
-                    {shoe.versions[0]?.ShoeGender[0]?.price && (
+                    {shoe.ShoeGender[0]?.price && (
                       <span className="bg-primary-100 text-primary-800 px-3 py-1 rounded-full text-sm font-medium">
-                        ${shoe.versions[0]?.ShoeGender[0]?.price.toString()}
+                        ${shoe.ShoeGender[0]?.price.toString()}
                       </span>
                     )}
                   </div>
 
-                  <p className="text-neutral-600 mb-4">{shoe.versions[0]?.intendedUse || 'General Running'}</p>
+                  <p className="text-neutral-600 mb-4">{shoe.intendedUse?.replace(/\b\w/g, (char) => char.toUpperCase()) || 'General Running'}</p>
 
-                  {shoe.specs && (
-                    <div className="grid grid-cols-3 gap-2 mb-4 bg-neutral-50 p-3 rounded-lg">
-                      {shoe.versions[0]?.ShoeGender[0]?.weightGrams !== null && (
-                        <div className="text-center">
-                          <span className="block text-sm text-neutral-500">Weight</span>
-                          <span className="font-medium">{shoe.versions[0]?.ShoeGender[0]?.weightGrams}g</span>
-                        </div>
-                      )}
-                      {shoe.specs.stackHeightMm !== null && (
-                        <div className="text-center">
-                          <span className="block text-sm text-neutral-500">Stack</span>
-                          <span className="font-medium">{shoe.specs.stackHeightMm}mm</span>
-                        </div>
-                      )}
-                      {shoe.specs.heelToToeDropMm !== null && (
-                        <div className="text-center">
-                          <span className="block text-sm text-neutral-500">Drop</span>
-                          <span className="font-medium">{shoe.specs.heelToToeDropMm}mm</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <div className="grid grid-cols-3 gap-2 mb-4 bg-neutral-50 p-3 rounded-lg">
+                    {shoe.ShoeGender[0]?.weightGrams !== null && (
+                      <div className="text-center">
+                        <span className="block text-sm text-neutral-500">Weight</span>
+                        <span className="font-medium">{shoe.ShoeGender[0]?.weightGrams}g</span>
+                      </div>
+                    )}
+                    {shoe.stackHeightMm !== null && (
+                      <div className="text-center">
+                        <span className="block text-sm text-neutral-500">Stack</span>
+                        <span className="font-medium">{shoe.stackHeightMm}mm</span>
+                      </div>
+                    )}
+                    {shoe.heelToToeDropMm !== null && (
+                      <div className="text-center">
+                        <span className="block text-sm text-neutral-500">Drop</span>
+                        <span className="font-medium">{shoe.heelToToeDropMm}mm</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {shoe.versions.length > 0 && (
-                  <div className="border-t pt-4 mt-2">
-                    <h3 className="text-lg font-normal text-neutral-600 mb-2">Versions:</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {shoe.versions.map((version) => (
-                        <Link 
-                          key={version.id} 
-                          href={`/shoes/versions/${version.id}`} 
-                          className="bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full text-sm transition-colors"
-                        >
-                          {version.name}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <div className="border-t pt-4 mt-2">
+                  <Link 
+                    href={`/shoes/${shoe.id}`} 
+                    className="bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full text-sm transition-colors"
+                  >
+                    View Details
+                  </Link>
+                </div>
               </div>
             ))}
           </div>

@@ -6,21 +6,58 @@ import {loadChatModel} from "../retrieval_graph/utils";
 import Sitemapper from "sitemapper";
 import {convert} from "html-to-text";
 
+/**
+ * Helper function to convert string "null" values to undefined
+ * @param value The value to check
+ * @returns undefined if the value is already undefined, contains "null", or equals "null", otherwise the original value
+ */
+function nullStringToUndefined<T>(value: T): T | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value === 'string' && value.includes('null')) return undefined;
+    return value;
+}
+
 // Initialize Prisma client
 const prisma = new PrismaClient();
 
-// Define schema for shoe data extraction
+// Define schemas for shoe data extraction
+// Basic shoe information schema
+const BasicShoeInfoSchema = z.object({
+    model: z.string().describe("The model name of the shoe. This should not include the gender the shoe is made for."),
+    brand: z.string().describe("The brand name of the shoe"),
+});
+
+// Shoe specifications schema
+const ShoeSpecificationsSchema = z.object({
+    stackHeightMm: z.number().nullable().describe("The stack height of the shoe in millimeters"),
+    heelToToeDropMm: z.number().nullable().describe("The heel-to-toe drop of the shoe in millimeters"),
+    width: z.string().nullable().describe("The width of the shoe (e.g., narrow, standard, wide)"),
+    depth: z.string().nullable().describe("The depth of the shoe (e.g., low, medium, high)")
+});
+
+// Shoe version information schema
+const ShoeVersionInfoSchema = z.object({
+    intendedUse: z.string().nullable().describe('The intended use of the shoe e.g. road, trail'),
+    trueToSize: z.string().nullable().describe("Whether the shoe is true to size. Or fits small, or large."),
+    previousModel: z.string().nullable().describe("The previous model name of the shoe"),
+    nextModel: z.string().nullable().describe("The next model name of the shoe"),
+    changes: z.string().nullable().describe("The changes made from the previous model"),
+    releaseDate: z.string().nullable().describe("The release date of the shoe in ISO format (YYYY-MM-DD)")
+});
+
+// Shoe gender-specific information schema
+const ShoeGenderInfoSchema = z.object({
+    gender: z.enum(['male', 'female', 'none']).describe('The gender the shoe is made for'),
+    price: z.number().nullable().describe("The price of the shoe in numeric format (no currency symbol)"),
+    weightGrams: z.number().nullable().describe("The weight of the shoe in grams"),
+});
+
+// Combined schema for backward compatibility
 const BrandShoeDataSchema = z.object({
     model: z.string().describe("The model name of the shoe. This should not include the gender the shoe is made for, nor the version number or model type like mid or luxe."),
     brand: z.string().describe("The brand name of the shoe"),
-    specifications: z.object({
-        stackHeightMm: z.number().nullable().describe("The stack height of the shoe in millimeters"),
-        heelToToeDropMm: z.number().nullable().describe("The heel-to-toe drop of the shoe in millimeters"),
-        width: z.string().nullable().describe("The width of the shoe (e.g., narrow, standard, wide)"),
-        depth: z.string().nullable().describe("The depth of the shoe (e.g., low, medium, high)")
-    }),
+    specifications: ShoeSpecificationsSchema,
     version: z.object({
-        name: z.string().describe("The version name of the shoe (e.g., '2', '3', '4.5', 'Mid', 'Waterproof')"),
         gender: z.enum(['male', 'female', 'none']).describe('The gender the shoe is made for'),
         price: z.number().nullable().describe("The price of the shoe in numeric format (no currency symbol)"),
         weightGrams: z.number().nullable().describe("The weight of the shoe in grams"),
@@ -29,70 +66,233 @@ const BrandShoeDataSchema = z.object({
         previousModel: z.string().nullable().describe("The previous model name of the shoe"),
         nextModel: z.string().nullable().describe("The next model name of the shoe"),
         changes: z.string().nullable().describe("The changes made from the previous model"),
-        releaseDate: z.string().nullable().describe("The release date of the shoe in ISO format (YYYY-MM-DD)")
+        releaseDate: z.string().nullable().describe("The release date of the shoe in ISO format (YYYY-MM-DD)"),
+        url: z.string().describe("The URL of the shoe")
     }).describe("Version information for the shoe")
 });
 
 /**
- * Extract shoe data from HTML content using an LLM
+ * Extract basic shoe information from HTML content using an LLM
  * @param html The HTML content to extract data from
- * @param modelName The name of the LLM model to use (default: 'openai/gpt-4o')
- * @returns An array of extracted shoe data
+ * @param modelName The name of the LLM model to use (default: 'openai/gpt-4o-mini')
+ * @returns Basic shoe information (model, brand)
  */
-export async function extractShoeDataFromBrandSite(
+async function extractBasicShoeInfo(
     html: string,
-    modelName = 'openai/gpt-4o'
-): Promise<z.infer<typeof BrandShoeDataSchema>> {
-    console.log(`Extracting shoe data using LLM model: ${modelName}...`);
+    modelName = 'openai/gpt-4o-mini'
+): Promise<z.infer<typeof BasicShoeInfoSchema>> {
+    console.log(`Extracting basic shoe information using LLM model: ${modelName}...`);
 
     try {
         // Load the LLM model
         const llm = await loadChatModel(modelName);
-        const model = llm.withStructuredOutput(BrandShoeDataSchema).withRetry();
+        const model = llm.withStructuredOutput(BasicShoeInfoSchema).withRetry();
 
         // Create a prompt for the LLM
         const prompt = [
             {
                 role: "system",
-                content: `You are a specialized AI for extracting structured data about shoes from HTML content. 
-Your task is to analyze the HTML and identify all shoes present, extracting their details according to the specified schema.
+                content: `You are a specialized AI for extracting basic shoe information from HTML content.
+Your task is to analyze the HTML and identify the model name and brand of the shoe.
 
-For each shoe, extract:
-1. Model name (without the version number or type like mid or waterproof)
+Extract:
+1. Model name
 2. Brand name
-3. Specifications:
-   - Weight in grams
-   - Stack height in millimeters
-   - Heel-to-toe drop in millimeters
-   - Width (e.g., narrow, standard, wide)
-   - Depth (e.g., low, medium, high)
-4. Version information:
-   - Version name (e.g '2', '3', '4.5', 'Mid', 'Waterproof')
-   - Gender (male, female, or none)
-   - Price (as a number without currency symbols)
-   - Intended use (e.g., road, trail)
-   - True to size (indicating if the shoe fits true to size, small, or large)
-   - Previous model name (if available)
-   - Next model name (if available)
-   - Changes from previous model (if available)
-   - Release date (in YYYY-MM-DD format) (if available)
 
-IMPORTANT: Be thorough and extract all shoes present in the HTML. If a piece of information is not available or you are uncertain about its value, you MUST return null for that field. Do not guess or provide default values when information is missing.
-
-For numeric fields like price, weight, stack height, and heel-to-toe drop, only provide a value if you can find a specific number in the content. Otherwise, return null.
-
-For text fields like intended use, true to size, previous model, etc., only provide a value if you can find specific text about it. Otherwise, return null.
-
-Return the data in the structured format specified by the schema.`
+IMPORTANT: Be thorough and accurate. Focus only on identifying the correct model name and brand.
+The model name should not include the gender the shoe is made for.`,
             },
             {
                 role: "user",
-                content: `Extract shoe data from the following HTML content:\n\n${html}`
+                content: `Extract the model name and brand from the following HTML content:\n\n${html}`
             }
         ];
 
         // Extract data using the LLM
         return model.invoke(prompt);
+    } catch (error) {
+        console.error('Error extracting basic shoe information with LLM:', error);
+        throw error;
+    }
+}
+
+/**
+ * Extract shoe specifications from HTML content using an LLM
+ * @param html The HTML content to extract data from
+ * @param modelName The name of the LLM model to use (default: 'openai/gpt-4o-mini')
+ * @returns Shoe specifications (stackHeightMm, heelToToeDropMm, width, depth)
+ */
+async function extractShoeSpecifications(
+    html: string,
+    modelName = 'openai/gpt-4o-mini'
+): Promise<z.infer<typeof ShoeSpecificationsSchema>> {
+    console.log(`Extracting shoe specifications using LLM model: ${modelName}...`);
+
+    try {
+        // Load the LLM model
+        const llm = await loadChatModel(modelName);
+        const model = llm.withStructuredOutput(ShoeSpecificationsSchema).withRetry();
+
+        // Create a prompt for the LLM
+        const prompt = [
+            {
+                role: "system",
+                content: `You are a specialized AI for extracting shoe specifications from HTML content.
+Your task is to analyze the HTML and identify the technical specifications of the shoe.
+
+Extract:
+1. Stack height in millimeters
+2. Heel-to-toe drop in millimeters
+3. Width (e.g., narrow, standard, wide)
+4. Depth (e.g., low, medium, high)
+
+IMPORTANT: Be thorough and accurate. Focus only on identifying the correct specifications.
+If a piece of information is not available or you are uncertain about its value, you MUST return null for that field.
+For numeric fields like stack height and heel-to-toe drop, only provide a value if you can find a specific number in the content. Otherwise, return null.`
+            },
+            {
+                role: "user",
+                content: `Extract the specifications from the following HTML content:\n\n${html}`
+            }
+        ];
+
+        // Extract data using the LLM
+        return model.invoke(prompt);
+    } catch (error) {
+        console.error('Error extracting shoe specifications with LLM:', error);
+        throw error;
+    }
+}
+
+/**
+ * Extract shoe version information from HTML content using an LLM
+ * @param html The HTML content to extract data from
+ * @param modelName The name of the LLM model to use (default: 'openai/gpt-4o-mini')
+ * @returns Shoe version information
+ */
+async function extractShoeVersionInfo(
+    html: string,
+    modelName = 'openai/gpt-4o-mini'
+): Promise<z.infer<typeof ShoeVersionInfoSchema>> {
+    console.log(`Extracting shoe version information using LLM model: ${modelName}...`);
+
+    try {
+        // Load the LLM model
+        const llm = await loadChatModel(modelName);
+        const model = llm.withStructuredOutput(ShoeVersionInfoSchema).withRetry();
+
+        // Create a prompt for the LLM
+        const prompt = [
+            {
+                role: "system",
+                content: `You are a specialized AI for extracting shoe information from HTML content.
+Your task is to analyze the HTML and identify specific details about the shoe.
+
+Extract:
+1. Intended use (e.g., road, trail)
+2. True to size (indicating if the shoe fits true to size, small, or large)
+3. Previous model name (if available)
+4. Next model name (if available)
+5. Changes from previous model (if available)
+6. Release date (in YYYY-MM-DD format) (if available)
+
+IMPORTANT: Be thorough and accurate. Focus only on identifying the correct version information.
+If a piece of information is not available or you are uncertain about its value, you MUST return null for that field.
+For text fields like intended use, true to size, previous model, etc., only provide a value if you can find specific text about it. Otherwise, return null.`
+            },
+            {
+                role: "user",
+                content: `Extract the version information from the following HTML content:\n\n${html}`
+            }
+        ];
+
+        // Extract data using the LLM
+        return model.invoke(prompt);
+    } catch (error) {
+        console.error('Error extracting shoe version information with LLM:', error);
+        throw error;
+    }
+}
+
+/**
+ * Extract shoe gender-specific information from HTML content using an LLM
+ * @param html The HTML content to extract data from
+ * @param modelName The name of the LLM model to use (default: 'openai/gpt-4o-mini')
+ * @returns Shoe gender-specific information
+ */
+async function extractShoeGenderInfo(
+    html: string,
+    modelName = 'openai/gpt-4o-mini'
+): Promise<z.infer<typeof ShoeGenderInfoSchema>> {
+    console.log(`Extracting shoe gender information using LLM model: ${modelName}...`);
+
+    try {
+        // Load the LLM model
+        const llm = await loadChatModel(modelName);
+        const model = llm.withStructuredOutput(ShoeGenderInfoSchema).withRetry();
+
+        // Create a prompt for the LLM
+        const prompt = [
+            {
+                role: "system",
+                content: `You are a specialized AI for extracting gender-specific shoe information from HTML content.
+Your task is to analyze the HTML and identify gender-specific details about the shoe.
+
+Extract:
+1. Gender (male, female, or none)
+3. Price (as a number without currency symbols)
+4. Weight in grams
+
+IMPORTANT: Be thorough and accurate. Focus only on identifying the correct gender-specific information.
+If a piece of information is not available or you are uncertain about its value, you MUST return null for that field.
+For numeric fields like price and weight, only provide a value if you can find a specific number in the content. Otherwise, return null.`
+            },
+            {
+                role: "user",
+                content: `Extract the gender-specific information from the following HTML content:\n\n${html}`
+            }
+        ];
+
+        // Extract data using the LLM
+        return model.invoke(prompt);
+    } catch (error) {
+        console.error('Error extracting shoe gender information with LLM:', error);
+        throw error;
+    }
+}
+
+/**
+ * Extract shoe data from HTML content using an LLM
+ * @param url
+ * @param content
+ * @param modelName The name of the LLM model to use (default: 'openai/gpt-4o-mini')
+ * @returns An array of extracted shoe data
+ */
+export async function extractShoeDataFromBrandSite(
+    url: string,
+    content: string,
+    modelName = 'openai/gpt-4o-mini'
+): Promise<z.infer<typeof BrandShoeDataSchema>> {
+    console.log(`Extracting shoe data using LLM model: ${modelName}...`);
+
+    try {
+        // Extract each aspect of the shoe data separately
+        const basicInfo = await extractBasicShoeInfo(content, modelName);
+        const specifications = await extractShoeSpecifications(content, modelName);
+        const versionInfo = await extractShoeVersionInfo(content, modelName);
+        const genderInfo = await extractShoeGenderInfo(content, modelName);
+
+        // Combine the extracted data into the expected format
+        return {
+            model: basicInfo.model,
+            brand: basicInfo.brand,
+            specifications: specifications,
+            version: {
+                ...versionInfo,
+                ...genderInfo,
+                url
+            }
+        };
     } catch (error) {
         console.error('Error extracting shoe data with LLM:', error);
         throw error;
@@ -171,7 +371,7 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
                 brand,
                 specifications,
                 version
-            } = await extractShoeDataFromBrandSite(html);
+            } = await extractShoeDataFromBrandSite(page.url, html);
 
             // Skip if we don't have the minimum required data
             if (!model || !brand) {
@@ -181,101 +381,74 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
 
             console.log(`Processing: ${brand} ${model}`);
 
-            // Create or update the shoe in the database
+            // Extract all data
+            const {stackHeightMm, heelToToeDropMm, width, depth} = specifications;
+            const {previousModel, nextModel, changes, releaseDate, gender, intendedUse, trueToSize, price, weightGrams, url} = version;
+
+            // Parse the release date string to a Date object if it exists
+            const parsedReleaseDate = releaseDate && !isNaN(Date.parse(releaseDate)) ? new Date(releaseDate) : null;
+
+            // Create or update the shoe in the database with all fields
             const shoe = await prisma.shoe.upsert({
                 where: {
                     model_brand: {model, brand},
                 },
                 update: {
-                    // No additional fields to update
+                    // Update spec fields
+                    stackHeightMm: nullStringToUndefined(stackHeightMm),
+                    heelToToeDropMm: nullStringToUndefined(heelToToeDropMm),
+                    width: nullStringToUndefined(width),
+                    depth: nullStringToUndefined(depth),
+
+                    // Update version fields
+                    previousModel: nullStringToUndefined(previousModel),
+                    nextModel: nullStringToUndefined(nextModel),
+                    changes: nullStringToUndefined(changes),
+                    releaseDate: parsedReleaseDate,
+                    intendedUse: nullStringToUndefined(intendedUse),
+                    trueToSize: nullStringToUndefined(trueToSize),
                 },
                 create: {
                     model,
                     brand,
-                    // No additional fields to create
+
+                    // Create spec fields
+                    stackHeightMm: nullStringToUndefined(stackHeightMm),
+                    heelToToeDropMm: nullStringToUndefined(heelToToeDropMm),
+                    width: nullStringToUndefined(width),
+                    depth: nullStringToUndefined(depth),
+
+                    // Create version fields
+                    previousModel: nullStringToUndefined(previousModel),
+                    nextModel: nullStringToUndefined(nextModel),
+                    changes: nullStringToUndefined(changes),
+                    releaseDate: parsedReleaseDate,
+                    intendedUse: nullStringToUndefined(intendedUse),
+                    trueToSize: nullStringToUndefined(trueToSize),
                 },
             });
 
             console.log(`Saved shoe: ${shoe.id} - ${shoe.brand} ${shoe.model}`);
 
-            // Extract and save shoe specifications
-            const {stackHeightMm, heelToToeDropMm, width, depth} = specifications;
-
-            if (stackHeightMm !== null || heelToToeDropMm !== null || width !== null || depth !== null) {
-                await prisma.shoeSpec.upsert({
-                    where: {
-                        shoeId: shoe.id,
-                    },
-                    update: {
-                        stackHeightMm,
-                        heelToToeDropMm,
-                        width,
-                        depth,
-                        // Other spec fields would be updated here
-                    },
-                    create: {
-                        shoeId: shoe.id,
-                        stackHeightMm,
-                        heelToToeDropMm,
-                        width,
-                        depth,
-                        // Other spec fields would be set here
-                    },
-                });
-
-                console.log(`Saved specs for shoe: ${shoe.id}`);
-            }
-
-            // Save version information if available
-            const {previousModel, nextModel, changes, releaseDate, gender, intendedUse, trueToSize, price, weightGrams} = version;
-            const versionName = version.name ? version.name : '1';
-
-            // Parse the release date string to a Date object if it exists
-            const parsedReleaseDate = releaseDate && !isNaN(Date.parse(releaseDate)) ? new Date(releaseDate) : null;
-
-            const versionDB = await prisma.shoeVersion.upsert({
-                where: {
-                    id_name: {
-                        shoeId: shoe.id,
-                        name: versionName,
-                    }
-                },
-                update: {
-                    previousModel,
-                    nextModel,
-                    changes,
-                    releaseDate: parsedReleaseDate,
-                    intendedUse,
-                    trueToSize,
-                },
-                create: {
-                    shoeId: shoe.id,
-                    name: versionName,
-                    previousModel,
-                    nextModel,
-                    changes,
-                    releaseDate: parsedReleaseDate,
-                    intendedUse,
-                    trueToSize,
-                },
-            });
-
+            // Create or update gender information
             await prisma.shoeGender.upsert({
                 where: {
                     id_gender: {
-                        versionId: versionDB.id,
+                        shoeId: shoe.id,
                         gender,
                     }
                 },
                 update: {
-                    price: price !== null ? price : undefined,
-                    weightGrams,
+                    price: nullStringToUndefined(price),
+                    weightGrams: nullStringToUndefined(weightGrams),
+                    url
                 },
                 create: {
-                    versionId: versionDB.id,
+                    shoeId: shoe.id,
                     gender,
-                    price: price !== null ? price : undefined,
-                    weightGrams,
+                    price: nullStringToUndefined(price),
+                    weightGrams: nullStringToUndefined(weightGrams),
+                    url
                 }
             })
 
@@ -298,7 +471,6 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
  * This function demonstrates how to use the sitemap parser to identify product pages
  * and pass them to the scraper.
  *
- * @param sitemapUrl Optional URL of the sitemap to parse. If not provided, uses default example pages.
  */
 async function main() {
     // First initialize the database

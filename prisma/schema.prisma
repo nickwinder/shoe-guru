@@ -19,37 +19,13 @@ model Shoe {
   brand     String
   createdAt DateTime @default(now())
 
-  specs    ShoeSpec?
-  versions ShoeVersion[]
-
-  @@unique([model, brand], name: "model_brand")
-}
-
-model ShoeSpec {
-  id              Int     @id @default(autoincrement())
-  shoeId          Int     @unique
+  // Fields from ShoeSpec
   stackHeightMm   Int?
   heelToToeDropMm Int?
   width           String? // e.g., "narrow", "standard", "wide"
   depth           String? // e.g., "low", "medium", "high"
 
-  shoe Shoe @relation(fields: [shoeId], references: [id], onDelete: Cascade)
-}
-
-model ShoeReview {
-  id         Int     @id @default(autoincrement())
-  vesrionId  Int
-  fit        String?
-  feel       String?
-  durability String?
-
-  shoeVersion ShoeVersion @relation(fields: [vesrionId], references: [id], onDelete: Cascade)
-}
-
-model ShoeVersion {
-  id            Int       @id @default(autoincrement())
-  shoeId        Int
-  name          String
+  // Fields from ShoeVersion
   intendedUse   String? // e.g., "road", "trail", "race"
   trueToSize    String? // e.g. "true", "small", "large"
   previousModel String?
@@ -57,24 +33,35 @@ model ShoeVersion {
   changes       String?
   releaseDate   DateTime?
 
-  shoe       Shoe         @relation(fields: [shoeId], references: [id], onDelete: Cascade)
+  // Relations
   ShoeGender ShoeGender[]
   reviews    ShoeReview[]
 
-  @@unique([shoeId, name], name: "id_name")
+  @@unique([model, brand], name: "model_brand")
+}
+
+model ShoeReview {
+  id         Int     @id @default(autoincrement())
+  shoeId     Int
+  fit        String?
+  feel       String?
+  durability String?
+
+  shoe Shoe @relation(fields: [shoeId], references: [id], onDelete: Cascade)
 }
 
 model ShoeGender {
   id          Int      @id @default(autoincrement())
-  versionId   Int
+  shoeId      Int
   gender      String
+  url         String
   weightGrams Int?
   price       Decimal?
   imageIds    Int[]
 
-  version ShoeVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  shoe Shoe @relation(fields: [shoeId], references: [id], onDelete: Cascade)
 
-  @@unique([versionId, gender], name: "id_gender")
+  @@unique([shoeId, gender], name: "id_gender")
 }
 
 model Image {
