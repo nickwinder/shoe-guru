@@ -83,7 +83,6 @@ describe("Shoe Scraper", () => {
                 console.log(`- Brand: ${superiorShoe.brand}`);
                 console.log(`- Model: ${superiorShoe.model}`);
                 console.log(`- Price: ${superiorShoe.version.price}`);
-                console.log(`- True to Size: ${superiorShoe.version.trueToSize}`);
                 console.log('- Specifications:');
                 console.log(`  - Weight: ${superiorShoe.version.weightGrams} grams`);
                 console.log(`  - Stack Height: ${superiorShoe.specifications.stackHeightMm} mm`);

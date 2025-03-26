@@ -38,7 +38,6 @@ const ShoeSpecificationsSchema = z.object({
 // Shoe version information schema
 const ShoeVersionInfoSchema = z.object({
     intendedUse: z.string().nullable().describe('The intended use of the shoe e.g. road, trail'),
-    trueToSize: z.string().nullable().describe("Whether the shoe is true to size. Or fits small, or large."),
     previousModel: z.string().nullable().describe("The previous model name of the shoe"),
     nextModel: z.string().nullable().describe("The next model name of the shoe"),
     changes: z.string().nullable().describe("The changes made from the previous model"),
@@ -62,7 +61,6 @@ const BrandShoeDataSchema = z.object({
         price: z.number().nullable().describe("The price of the shoe in numeric format (no currency symbol)"),
         weightGrams: z.number().nullable().describe("The weight of the shoe in grams"),
         intendedUse: z.string().nullable().describe('The intended use of the shoe e.g. road, trail'),
-        trueToSize: z.string().nullable().describe("Whether the shoe is true to size. Or fits small, or large."),
         previousModel: z.string().nullable().describe("The previous model name of the shoe"),
         nextModel: z.string().nullable().describe("The next model name of the shoe"),
         changes: z.string().nullable().describe("The changes made from the previous model"),
@@ -190,15 +188,14 @@ Your task is to analyze the HTML and identify specific details about the shoe.
 
 Extract:
 1. Intended use (e.g., road, trail)
-2. True to size (indicating if the shoe fits true to size, small, or large)
-3. Previous model name (if available)
-4. Next model name (if available)
-5. Changes from previous model (if available)
-6. Release date (in YYYY-MM-DD format) (if available)
+2. Previous model name (if available)
+3. Next model name (if available)
+4. Changes from previous model (if available)
+5. Release date (in YYYY-MM-DD format) (if available)
 
 IMPORTANT: Be thorough and accurate. Focus only on identifying the correct version information.
 If a piece of information is not available or you are uncertain about its value, you MUST return null for that field.
-For text fields like intended use, true to size, previous model, etc., only provide a value if you can find specific text about it. Otherwise, return null.`
+For text fields like intended use, previous model, etc., only provide a value if you can find specific text about it. Otherwise, return null.`
             },
             {
                 role: "user",
@@ -383,7 +380,7 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
 
             // Extract all data
             const {stackHeightMm, heelToToeDropMm, width, depth} = specifications;
-            const {previousModel, nextModel, changes, releaseDate, gender, intendedUse, trueToSize, price, weightGrams, url} = version;
+            const {previousModel, nextModel, changes, releaseDate, gender, intendedUse, price, weightGrams, url} = version;
 
             // Parse the release date string to a Date object if it exists
             const parsedReleaseDate = releaseDate && !isNaN(Date.parse(releaseDate)) ? new Date(releaseDate) : null;
@@ -406,7 +403,6 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
                     changes: nullStringToUndefined(changes),
                     releaseDate: parsedReleaseDate,
                     intendedUse: nullStringToUndefined(intendedUse),
-                    trueToSize: nullStringToUndefined(trueToSize),
                 },
                 create: {
                     model,
@@ -424,7 +420,6 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
                     changes: nullStringToUndefined(changes),
                     releaseDate: parsedReleaseDate,
                     intendedUse: nullStringToUndefined(intendedUse),
-                    trueToSize: nullStringToUndefined(trueToSize),
                 },
             });
 

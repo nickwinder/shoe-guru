@@ -21,11 +21,7 @@ export default async function ShoeDetailsPage({
             id,
         },
         include: {
-            ShoeGender: {
-                where: {
-                    gender: 'male',
-                },
-            },
+            ShoeGender: true,
             reviews: true,
         },
     });
@@ -37,12 +33,23 @@ export default async function ShoeDetailsPage({
     return (
         <div className="max-w-4xl mx-auto">
             <div className="mb-6">
-                <Link href="/shoes"
-                      className="inline-flex items-center text-primary-600 hover:text-primary-700 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24"
-                         stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                <Link
+                    href="/shoes"
+                    className="inline-flex items-center text-primary-600 hover:text-primary-700 transition-colors"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 mr-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                        />
                     </svg>
                     Back to all shoes
                 </Link>
@@ -57,29 +64,26 @@ export default async function ShoeDetailsPage({
                     {shoe.intendedUse && (
                         <span
                             className="bg-secondary-100 text-secondary-800 px-3 py-1 rounded-full text-sm font-medium">
-              {shoe.intendedUse}
-            </span>
-                    )}
-                    {shoe.trueToSize && (
-                        <span
-                            className="bg-secondary-100 text-secondary-800 px-3 py-1 rounded-full text-sm font-medium">
-              Fit: {shoe.trueToSize}
-            </span>
+                            {shoe.intendedUse.charAt(0).toUpperCase() + shoe.intendedUse.slice(1)}
+                        </span>
                     )}
                     {shoe.releaseDate && (
-                        <span className="bg-neutral-100 text-neutral-800 px-3 py-1 rounded-full text-sm">
-              Released: {new Date(shoe.releaseDate).toLocaleDateString()}
-            </span>
+                        <span
+                            className="bg-secondary-100 text-secondary-800 px-3 py-1 rounded-full text-sm font-medium">
+                            Released: {new Date(shoe.releaseDate).toLocaleDateString()}
+                        </span>
                     )}
                     {shoe.previousModel && (
-                        <span className="bg-neutral-100 text-neutral-800 px-3 py-1 rounded-full text-sm">
-              Previous: {shoe.previousModel}
-            </span>
+                        <span
+                            className="bg-secondary-100 text-secondary-800 px-3 py-1 rounded-full text-sm font-medium">
+                            Previous: {shoe.previousModel}
+                        </span>
                     )}
                     {shoe.nextModel && (
-                        <span className="bg-neutral-100 text-neutral-800 px-3 py-1 rounded-full text-sm">
-              Next: {shoe.nextModel}
-            </span>
+                        <span
+                            className="bg-secondary-100 text-secondary-800 px-3 py-1 rounded-full text-sm font-medium">
+                            Next: {shoe.nextModel}
+                        </span>
                     )}
                 </div>
 
@@ -94,12 +98,6 @@ export default async function ShoeDetailsPage({
                     <h2 className="text-xl font-semibold mb-4">Specifications</h2>
                     <div
                         className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-neutral-50 p-6 rounded-lg border border-neutral-200">
-                        {shoe.ShoeGender[0]?.weightGrams !== null && (
-                            <div className="text-center p-3 bg-white rounded-lg shadow-sm">
-                                <span className="block text-sm text-neutral-500 mb-1">Weight</span>
-                                <span className="font-semibold text-lg">{shoe.ShoeGender[0].weightGrams}g</span>
-                            </div>
-                        )}
                         {shoe.stackHeightMm !== null && (
                             <div className="text-center p-3 bg-white rounded-lg shadow-sm">
                                 <span className="block text-sm text-neutral-500 mb-1">Stack Height</span>
@@ -130,15 +128,122 @@ export default async function ShoeDetailsPage({
                 {shoe.ShoeGender.length > 0 && (
                     <div className="mb-8">
                         <h2 className="text-xl font-semibold mb-4">Available for</h2>
-                        <div className="flex gap-2">
-                            {shoe.ShoeGender.map((gender) => (
-                                <span
-                                    key={gender.id}
-                                    className="bg-primary-100 text-primary-800 px-4 py-2 rounded-full text-sm font-medium"
-                                >
-                  {gender.gender} {gender.price && `- $${gender.price.toString()}`}
-                </span>
-                            ))}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {shoe.ShoeGender.some(g => g.gender === "male") && (
+                                <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-6">
+                                    <h3 className="text-lg font-semibold mb-3 text-primary-800">Mens</h3>
+                                    <div className="space-y-3">
+                                        {shoe.ShoeGender.filter(g => g.gender === "male").map((gender) => (
+                                            <div key={gender.id} className="space-y-2">
+                                                {gender.price && (
+                                                    <div className="flex items-center">
+                                                        <span className="font-medium text-neutral-600 w-24">
+                                                            Price:
+                                                        </span>
+                                                        <span className="text-neutral-800">
+                                                            ${gender.price.toString()}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {gender.weightGrams && (
+                                                    <div className="flex items-center">
+                                                        <span className="font-medium text-neutral-600 w-24">
+                                                            Weight:
+                                                        </span>
+                                                        <span className="text-neutral-800">
+                                                            {gender.weightGrams}g
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {gender.url && (
+                                                    <div className="mt-3">
+                                                        <a
+                                                            href={gender.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center text-primary-600 hover:text-primary-700 transition-colors"
+                                                        >
+                                                            <span>View Details</span>
+                                                            <svg
+                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                className="h-4 w-4 ml-1"
+                                                                fill="none"
+                                                                viewBox="0 0 24 24"
+                                                                stroke="currentColor"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                                                />
+                                                            </svg>
+                                                        </a>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {shoe.ShoeGender.some(g => g.gender === "female") && (
+                                <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-6">
+                                    <h3 className="text-lg font-semibold mb-3 text-primary-800">Womens</h3>
+                                    <div className="space-y-3">
+                                        {shoe.ShoeGender.filter(g => g.gender === "female").map((gender) => (
+                                            <div key={gender.id} className="space-y-2">
+                                                {gender.price && (
+                                                    <div className="flex items-center">
+                                                        <span className="font-medium text-neutral-600 w-24">
+                                                            Price:
+                                                        </span>
+                                                        <span className="text-neutral-800">
+                                                            ${gender.price.toString()}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {gender.weightGrams && (
+                                                    <div className="flex items-center">
+                                                        <span className="font-medium text-neutral-600 w-24">
+                                                            Weight:
+                                                        </span>
+                                                        <span className="text-neutral-800">
+                                                            {gender.weightGrams}g
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {gender.url && (
+                                                    <div className="mt-3">
+                                                        <a
+                                                            href={gender.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center text-primary-600 hover:text-primary-700 transition-colors"
+                                                        >
+                                                            <span>View Details</span>
+                                                            <svg
+                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                className="h-4 w-4 ml-1"
+                                                                fill="none"
+                                                                viewBox="0 0 24 24"
+                                                                stroke="currentColor"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                                                />
+                                                            </svg>
+                                                        </a>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -148,19 +253,24 @@ export default async function ShoeDetailsPage({
                         <h2 className="text-xl font-semibold mb-4">Reviews</h2>
                         <div className="space-y-6">
                             {shoe.reviews.map((review) => (
-                                <div key={review.id}
-                                     className="bg-white border border-neutral-200 rounded-lg p-5 shadow-sm">
+                                <div
+                                    key={review.id}
+                                    className="bg-white border border-neutral-200 rounded-lg p-5 shadow-sm"
+                                >
                                     {review.fit && (
-                                        <p className="mb-2"><span
-                                            className="font-medium text-neutral-600">Fit:</span> {review.fit}</p>
+                                        <p className="mb-2">
+                                            <span className="font-medium text-neutral-600">Fit:</span> {review.fit}
+                                        </p>
                                     )}
                                     {review.feel && (
-                                        <p className="mb-2"><span
-                                            className="font-medium text-neutral-600">Feel:</span> {review.feel}</p>
+                                        <p className="mb-2">
+                                            <span className="font-medium text-neutral-600">Feel:</span> {review.feel}
+                                        </p>
                                     )}
                                     {review.durability && (
-                                        <p className="mb-2"><span
-                                            className="font-medium text-neutral-600">Durability:</span> {review.durability}
+                                        <p className="mb-2">
+                                            <span className="font-medium text-neutral-600">Durability:</span>{' '}
+                                            {review.durability}
                                         </p>
                                     )}
                                 </div>
