@@ -1,5 +1,6 @@
 import { RunnableConfig } from "@langchain/core/runnables";
-import { ingestDocuments } from "./retrieval_graph/retrieval.js";
+import { ingestDocuments as ingestHNSWDocuments } from "./retrieval_graph/retrieval.js";
+import { ingestDocuments as ingestPgVectorDocuments } from "./retrieval_graph/pgvector-retrieval.js";
 import { ensureConfiguration } from "./retrieval_graph/configuration.js";
 import dotenv from "dotenv";
 
@@ -12,7 +13,7 @@ dotenv.config();
  * 
  * Usage:
  * ```
- * npm run ingest -- --userId=user123 --sitemapUrls=https://example.com/sitemap.xml
+ * npm run ingest -- --sitemapUrls=https://example.com/sitemap.xml
  * ```
  */
 async function main() {
@@ -20,7 +21,7 @@ async function main() {
     // Parse command line arguments
     const args = process.argv.slice(2);
     const config: Record<string, any> = {};
-    
+
     for (const arg of args) {
       if (arg.startsWith('--')) {
         const [key, value] = arg.slice(2).split('=');
@@ -32,29 +33,34 @@ async function main() {
         }
       }
     }
-    
-    // Ensure required parameters are provided
-    if (!config.userId) {
-      throw new Error("Please provide a userId with --userId=<user_id>");
-    }
-    
+
     if (!config.sitemapUrls || config.sitemapUrls.length === 0) {
       throw new Error("Please provide at least one sitemap URL with --sitemapUrls=<url>");
     }
-    
+
     console.log("Starting document ingestion with the following configuration:");
     console.log(JSON.stringify(config, null, 2));
-    
+
     // Create a configuration object
     const runnableConfig: RunnableConfig = {
       configurable: {
-        ...config
+        ...config,
+        retrieverProvider: 'pgvector',
       }
     };
-    
-    // Run the ingestion process
-    await ingestDocuments(runnableConfig);
-    
+
+    // Get the configuration
+    const configuration = ensureConfiguration(runnableConfig);
+
+    // Run the ingestion process based on the configured provider
+    if (configuration.retrieverProvider === "pgvector") {
+      console.log("Using pgvector for document ingestion");
+      await ingestPgVectorDocuments(runnableConfig);
+    } else {
+      console.log("Using HNSWLib for document ingestion");
+      await ingestHNSWDocuments(runnableConfig);
+    }
+
     console.log("Document ingestion completed successfully.");
   } catch (error) {
     console.error("Error during document ingestion:", error);

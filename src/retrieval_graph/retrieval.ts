@@ -152,11 +152,10 @@ function parseSitemap(sitemapContent: string): Array<{ url: string, lastmod?: st
  * Fetches content from a URL, processes it, and converts it to Document objects.
  *
  * @param url - The URL to fetch
- * @param userId - User ID to associate with the document
  * @param lastmod - Optional last modified date from the sitemap
  * @returns A promise that resolves to an array of Document objects with the chunked URL content
  */
-async function fetchUrlContent(url: string, userId: string, lastmod?: string): Promise<Document[]> {
+async function fetchUrlContent(url: string, lastmod?: string): Promise<Document[]> {
     try {
         const content = await fetchUrl(url);
 
@@ -177,7 +176,6 @@ async function fetchUrlContent(url: string, userId: string, lastmod?: string): P
         const metadata: Record<string, any> = {
             source: url,
             title: title,
-            user_id: userId,
             content_hash: contentHash,
         };
 
@@ -209,7 +207,7 @@ async function fetchUrlContent(url: string, userId: string, lastmod?: string): P
 }
 
 function getLocalFilePath(configuration: ReturnType<typeof ensureConfiguration>): string {
-    const {userId, embeddingModel: embeddingModelName, sitemapUrls} = configuration;
+    const {embeddingModel: embeddingModelName, sitemapUrls} = configuration;
 
     // Create a deterministic name for the vector store based on configuration
     // Sort arrays to ensure consistent order regardless of input order
@@ -225,14 +223,14 @@ function getLocalFilePath(configuration: ReturnType<typeof ensureConfiguration>)
         .digest('hex')
         .substring(0, 10); // Use first 10 chars for brevity
 
-    // Create base directory for user
-    const userBaseDir = path.join(process.cwd(), "vector_store", userId);
-    if (!fs.existsSync(userBaseDir)) {
-        fs.mkdirSync(userBaseDir, {recursive: true});
+    // Create base directory for vector store
+    const baseDir = path.join(process.cwd(), "vector_store");
+    if (!fs.existsSync(baseDir)) {
+        fs.mkdirSync(baseDir, {recursive: true});
     }
 
     // Create specific directory for this configuration
-    return path.join(userBaseDir, configHash);
+    return path.join(baseDir, configHash);
 }
 
 /**
@@ -425,7 +423,7 @@ async function addDocumentsFromSitemaps(
                         console.log(`Processing URL: ${entry.url}${entry.lastmod ? ` (Last modified: ${entry.lastmod})` : ''}`);
 
                         // Fetch and process the URL content, passing the lastmod if available
-                        const urlDocuments = await fetchUrlContent(entry.url, configuration.userId, entry.lastmod).then((docs) => docs.filter(doc => doc.pageContent));
+                        const urlDocuments = await fetchUrlContent(entry.url, entry.lastmod).then((docs) => docs.filter(doc => doc.pageContent));
 
                         if (urlDocuments.length > 0) {
                             // Get the vector store and add documents
@@ -503,11 +501,6 @@ export async function getVectorStore(
     const configuration = ensureConfiguration(config);
     const embeddingModel = makeTextEmbeddings(configuration.embeddingModel);
 
-    const userId = configuration.userId;
-    if (!userId) {
-        throw new Error("Please provide a valid user_id in the configuration.");
-    }
-
     // Get the storage directory for this configuration
     const storageDir = getLocalFilePath(configuration);
 
@@ -548,11 +541,6 @@ export async function ingestDocuments(
 ): Promise<void> {
     const configuration = ensureConfiguration(config);
     const embeddingModel = makeTextEmbeddings(configuration.embeddingModel);
-
-    const userId = configuration.userId;
-    if (!userId) {
-        throw new Error("Please provide a valid user_id in the configuration.");
-    }
 
     const vectorStore = await getHNSWLib(configuration, embeddingModel);
     await addDocumentsFromSitemaps(configuration, vectorStore, embeddingModel);

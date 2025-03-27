@@ -5,12 +5,14 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
 }
 
 model Shoe {
@@ -67,4 +69,12 @@ model Image {
   id   Int    @id @default(autoincrement())
   name String
   data Bytes
+}
+
+model BRREmbedding {
+  id          String                      @id @default(uuid())
+  pageContent String                      @db.Text
+  metadata    Json
+  embedding   Unsupported("vector(1536)")
+  createdAt   DateTime                    @default(now())
 }

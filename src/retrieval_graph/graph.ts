@@ -4,7 +4,8 @@ import {ConfigurationAnnotation, ensureConfiguration,} from "./configuration";
 import {InputStateAnnotation, StateAnnotation} from "./state";
 import {formatDocs, getMessageText, loadChatModel} from "./utils";
 import {z} from "zod";
-import {applyRecencyBias, getVectorStore} from "./retrieval";
+import {applyRecencyBias, getVectorStore as getHNSWVectorStore} from "./retrieval";
+import {applyRecencyBias as pgApplyRecencyBias, getVectorStore as getPgVectorStore} from "./pgvector-retrieval";
 import * as events from "node:events";
 import {Prisma, PrismaClient, Shoe, ShoeGender, ShoeReview} from "@prisma/client";
 
@@ -43,7 +44,7 @@ const ShoeSearchConditions = z.object({
     // String filters
     width: z.union([z.string(), z.literal('empty')]),
     depth: z.union([z.string(), z.literal('empty')]),
-    intendedUse: z.union([z.string(), z.literal('empty')]),
+    intendedUse: z.union([z.enum(['road', 'trail']), z.literal('empty')]),
     gender: z.union([z.string(), z.literal('empty')]),
 
     // Sorting
@@ -80,8 +81,8 @@ async function generateQuery(
     // Feel free to customize the prompt, model, and other logic!
     let systemMessage = configuration.querySystemPromptTemplate
         .replace("{queries}", queries.join("\n- "))
-        .replace("{systemTime}", new Date().toISOString()
-            .replace("{shoes}", shoeData));
+        .replace("{systemTime}", new Date().toISOString())
+        .replace("{shoes}", shoeData);
 
     const messageValue = [
         {role: "system", content: systemMessage},
@@ -420,15 +421,25 @@ async function retrieve(
     const query = state.queries[state.queries.length - 1];
     const configuration = ensureConfiguration(config);
 
-    // Get the HNSWLib vector store
-    const vectorStore = await getVectorStore(config);
+    // Get the vector store based on the configured provider
+    let vectorStore;
+    if (configuration.retrieverProvider === "pgvector") {
+        vectorStore = await getPgVectorStore(config);
+    } else {
+        // Default to HNSWLib
+        vectorStore = await getHNSWVectorStore(config);
+    }
 
     // Perform similarity search
     let docs = await vectorStore.similaritySearch(query, 10);
 
     // Apply recency bias if configured
     if (configuration.recencyWeight > 0) {
-        docs = await applyRecencyBias(docs, configuration.recencyWeight);
+        if (configuration.retrieverProvider === "pgvector") {
+            docs = await pgApplyRecencyBias(docs, configuration.recencyWeight);
+        } else {
+            docs = await applyRecencyBias(docs, configuration.recencyWeight);
+        }
     }
 
     return {retrievedDocs: docs};
@@ -509,8 +520,8 @@ async function respond(
     // Feel free to customize the prompt, model, and other logic!
     let systemMessage = configuration.responseSystemPromptTemplate
         .replace("{retrievedDocs}", retrievedDocs)
-        .replace("{systemTime}", new Date().toISOString()
-        .replace("{shoes}", shoeData));
+        .replace("{systemTime}", new Date().toISOString())
+        .replace("{shoes}", shoeData);
 
     const messageValue = [
         {role: "system", content: systemMessage},

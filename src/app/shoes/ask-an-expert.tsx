@@ -1,12 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: string }) {
   const [query, setQuery] = useState(initialQuery);
   const [response, setResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = 'auto';
+      // Set the height to match the content
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [query]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,17 +60,23 @@ export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: st
       <form onSubmit={handleSubmit} suppressHydrationWarning>
         <div className="flex flex-row gap-2">
           <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <div className="absolute top-0 left-0 pt-3 pl-3 pointer-events-none">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
               </svg>
             </div>
-            <input
-              type="text"
+            <textarea
+              ref={textareaRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Ask our shoe expert any question..."
-              className="form-input pl-10 py-3 w-full"
+              className="form-input pl-10 py-3 w-full min-h-[48px]"
+              style={{
+                resize: 'none',
+                overflow: 'hidden',
+                lineHeight: '1.5',
+              }}
+              rows={1}
               disabled={isLoading}
             />
           </div>

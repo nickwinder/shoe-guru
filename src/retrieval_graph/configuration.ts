@@ -9,15 +9,10 @@ import { Annotation } from "@langchain/langgraph";
  * typeof ConfigurationAnnotation.State class for indexing and retrieval operations.
  *
  * This annotation defines the parameters needed for configuring the indexing and
- * retrieval processes, including user identification, embedding model selection,
+ * retrieval processes, including embedding model selection,
  * retriever provider choice, and search parameters.
  */
 export const IndexConfigurationAnnotation = Annotation.Root({
-  /**
-   * Unique identifier for the user.
-   */
-  userId: Annotation<string>,
-
   /**
    * Name of the embedding model to use. Must be a valid embedding model name.
    */
@@ -25,9 +20,11 @@ export const IndexConfigurationAnnotation = Annotation.Root({
 
   /**
    * The vector store provider to use for retrieval.
-   * Only 'local-file' (HNSWLib) is supported.
+   * Supported options:
+   * - 'local-file' (HNSWLib)
+   * - 'pgvector' (PostgreSQL with pgvector extension)
    */
-  retrieverProvider: Annotation<"local-file">,
+  retrieverProvider: Annotation<"local-file" | "pgvector">,
 
   /**
    * Paths to document files or directories for the HNSWLib retriever.
@@ -69,7 +66,6 @@ export function ensureIndexConfiguration(
     typeof IndexConfigurationAnnotation.State
   >;
   return {
-    userId: configurable.userId || "default", // Give a default user for shared docs
     embeddingModel:
       configurable.embeddingModel || "openai/text-embedding-3-small",
     retrieverProvider: configurable.retrieverProvider || "local-file",

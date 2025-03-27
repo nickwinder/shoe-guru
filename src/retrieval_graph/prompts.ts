@@ -86,13 +86,13 @@ System time: {systemTime}`;
 
 export const QUERY_SYSTEM_PROMPT_TEMPLATE = `Generate search queries to retrieve documents all about running shoes that may help answer the user's question. Previously, you made the following queries:
 
-Here are the shoes that have been identified to match the users request.
-<shoe_data>
-{shoes}
-</shoe_data>
-
 <previous_queries/>
 {queries}
 </previous_queries>
+
+After analyzing the users query, here are some shoes that were identified to be relevant to the users request. Use this data to enhance the query.
+<shoe_data>
+{shoes}
+</shoe_data>
 
 System time: {systemTime}`;

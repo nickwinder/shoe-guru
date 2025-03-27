@@ -29,8 +29,7 @@ async function testHNSWLib() {
   const embeddings = new MockEmbeddings();
 
   // Create the storage directory
-  const userId = "test-user";
-  const storageDir = path.join(process.cwd(), "vector_store", userId);
+  const storageDir = path.join(process.cwd(), "vector_store");
   if (!fs.existsSync(storageDir)) {
     fs.mkdirSync(storageDir, { recursive: true });
   }
@@ -57,15 +56,15 @@ async function testHNSWLib() {
   const docs = [
     new Document({
       pageContent: "This is a test document about shoes",
-      metadata: { user_id: "test-user", title: "Test Document 1" }
+      metadata: { title: "Test Document 1" }
     }),
     new Document({
       pageContent: "Running shoes are designed for running",
-      metadata: { user_id: "test-user", title: "Test Document 2" }
+      metadata: { title: "Test Document 2" }
     }),
     new Document({
       pageContent: "Hiking boots are designed for hiking",
-      metadata: { user_id: "test-user", title: "Test Document 3" }
+      metadata: { title: "Test Document 3" }
     })
   ];
 
