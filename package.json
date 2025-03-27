@@ -17,6 +17,7 @@
     "ingest": "npm run build:scraper && node dist/src/ingest.js",
     "db:init": "npm run build:scraper && node dist/src/db/init-db.js",
     "db:scrape": "npm run build:scraper && node dist/src/db/shoe-scraper.js",
+    "db:scrape-images": "npm run build:scraper && node dist/src/db/shoe-image-scraper.js",
     "db:setup": "npm run build:scraper && node dist/src/db/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"

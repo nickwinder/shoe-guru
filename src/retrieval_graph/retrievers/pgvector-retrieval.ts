@@ -107,8 +107,6 @@ export async function ingestDocuments(
         }
     );
 
-    await vectorStore.createHnswIndex({ dimensions: OPENAI_SMALL_EMBEDDINGS_DIMENSIONS })
-
     // Process each sitemap URL
     for (const sitemapUrl of configuration.sitemapUrls || []) {
         try {

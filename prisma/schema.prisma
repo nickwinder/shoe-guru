@@ -58,7 +58,7 @@ model ShoeGender {
   url         String
   weightGrams Int?
   price       Decimal?
-  imageIds    Int[]
+  images      Image[]
 
   shoe Shoe @relation(fields: [shoeId], references: [id], onDelete: Cascade)
 
@@ -66,7 +66,20 @@ model ShoeGender {
 }
 
 model Image {
-  id   Int    @id @default(autoincrement())
-  name String
-  data Bytes
+  id           Int    @id @default(autoincrement())
+  name         String
+  data         Bytes
+  shoeGenderId Int?
+
+  // Relations
+  ShoeGender ShoeGender? @relation(fields: [shoeGenderId], references: [id])
+}
+
+model brr_embedding {
+  id          Int                                  @id @default(autoincrement())
+  pageContent String
+  metadata    Json
+  embedding   Unsupported("vector(1536) NOT NULL")
+
+  @@index([embedding])
 }

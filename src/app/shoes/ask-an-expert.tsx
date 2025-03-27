@@ -20,6 +20,39 @@ export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: st
     }
   }, [query]);
 
+  // Handle default question selection
+  const handleDefaultQuestion = async (questionText: string) => {
+    setQuery(questionText);
+
+    // Submit the question directly without relying on state update
+    if (questionText) {
+      setIsLoading(true);
+      setResponse('');
+
+      try {
+        const response = await fetch('/api/ask-expert', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: questionText }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setResponse(data.response);
+      } catch (error) {
+        console.error("Error asking the expert:", error);
+        setResponse("Sorry, I couldn't get an answer at this time. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -111,10 +144,7 @@ export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: st
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => {
-              setQuery("What's the highest stack height zero drop shoe?");
-              setTimeout(() => handleSubmit(new Event('submit') as unknown as React.FormEvent), 0);
-            }}
+            onClick={() => handleDefaultQuestion("What's the highest stack height zero drop shoe?")}
             className="text-sm bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
             disabled={isLoading}
           >
@@ -122,10 +152,7 @@ export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: st
           </button>
           <button
             type="button"
-            onClick={() => {
-              setQuery("What's the widest trail shoe available?");
-              setTimeout(() => handleSubmit(new Event('submit') as unknown as React.FormEvent), 0);
-            }}
+            onClick={() => handleDefaultQuestion("What's the widest trail shoe available?")}
             className="text-sm bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
             disabled={isLoading}
           >
@@ -133,10 +160,7 @@ export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: st
           </button>
           <button
             type="button"
-            onClick={() => {
-              setQuery("Which shoes are best for flat feet runners?");
-              setTimeout(() => handleSubmit(new Event('submit') as unknown as React.FormEvent), 0);
-            }}
+            onClick={() => handleDefaultQuestion("Which shoes are best for flat feet runners?")}
             className="text-sm bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
             disabled={isLoading}
           >
@@ -144,10 +168,7 @@ export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: st
           </button>
           <button
             type="button"
-            onClick={() => {
-              setQuery("What are the most cushioned shoes for long distance running?");
-              setTimeout(() => handleSubmit(new Event('submit') as unknown as React.FormEvent), 0);
-            }}
+            onClick={() => handleDefaultQuestion("What are the most cushioned shoes for long distance running?")}
             className="text-sm bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
             disabled={isLoading}
           >
@@ -155,10 +176,7 @@ export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: st
           </button>
           <button
             type="button"
-            onClick={() => {
-              setQuery("Which shoes have the best grip for wet trail conditions?");
-              setTimeout(() => handleSubmit(new Event('submit') as unknown as React.FormEvent), 0);
-            }}
+            onClick={() => handleDefaultQuestion("Which shoes have the best grip for wet trail conditions?")}
             className="text-sm bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
             disabled={isLoading}
           >
