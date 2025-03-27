@@ -1,6 +1,6 @@
 import { RunnableConfig } from "@langchain/core/runnables";
-import { ingestDocuments as ingestHNSWDocuments } from "./retrieval_graph/retrieval.js";
-import { ingestDocuments as ingestPgVectorDocuments } from "./retrieval_graph/pgvector-retrieval.js";
+import { ingestDocuments as ingestHNSWDocuments } from "./retrieval_graph/retrievers/retrieval.js";
+import { ingestDocuments as ingestPgVectorDocuments } from "./retrieval_graph/retrievers/pgvector-retrieval.js";
 import { ensureConfiguration } from "./retrieval_graph/configuration.js";
 import dotenv from "dotenv";
 
@@ -13,44 +13,24 @@ dotenv.config();
  * 
  * Usage:
  * ```
- * npm run ingest -- --sitemapUrls=https://example.com/sitemap.xml
+ * npm run ingest
  * ```
  */
 async function main() {
   try {
-    // Parse command line arguments
-    const args = process.argv.slice(2);
-    const config: Record<string, any> = {};
-
-    for (const arg of args) {
-      if (arg.startsWith('--')) {
-        const [key, value] = arg.slice(2).split('=');
-        if (key === 'sitemapUrls') {
-          // Handle multiple sitemap URLs as a comma-separated list
-          config[key] = value.split(',');
-        } else {
-          config[key] = value;
-        }
-      }
-    }
-
-    if (!config.sitemapUrls || config.sitemapUrls.length === 0) {
-      throw new Error("Please provide at least one sitemap URL with --sitemapUrls=<url>");
-    }
-
-    console.log("Starting document ingestion with the following configuration:");
-    console.log(JSON.stringify(config, null, 2));
-
     // Create a configuration object
     const runnableConfig: RunnableConfig = {
       configurable: {
-        ...config,
         retrieverProvider: 'pgvector',
       }
     };
 
     // Get the configuration
     const configuration = ensureConfiguration(runnableConfig);
+
+    console.log("Starting document ingestion with the following configuration:");
+    console.log(JSON.stringify(configuration, null, 2));
+
 
     // Run the ingestion process based on the configured provider
     if (configuration.retrieverProvider === "pgvector") {
@@ -62,6 +42,7 @@ async function main() {
     }
 
     console.log("Document ingestion completed successfully.");
+    process.exit(0);
   } catch (error) {
     console.error("Error during document ingestion:", error);
     process.exit(1);

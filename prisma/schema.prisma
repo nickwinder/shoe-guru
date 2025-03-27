@@ -70,11 +70,3 @@ model Image {
   name String
   data Bytes
 }
-
-model BRREmbedding {
-  id          String                      @id @default(uuid())
-  pageContent String                      @db.Text
-  metadata    Json
-  embedding   Unsupported("vector(1536)")
-  createdAt   DateTime                    @default(now())
-}

@@ -4,10 +4,12 @@ import {ConfigurationAnnotation, ensureConfiguration,} from "./configuration";
 import {InputStateAnnotation, StateAnnotation} from "./state";
 import {formatDocs, getMessageText, loadChatModel} from "./utils";
 import {z} from "zod";
-import {applyRecencyBias, getVectorStore as getHNSWVectorStore} from "./retrieval";
-import {applyRecencyBias as pgApplyRecencyBias, getVectorStore as getPgVectorStore} from "./pgvector-retrieval";
+import {getVectorStore as getHNSWVectorStore} from "./retrievers/retrieval";
+import {getVectorStore as getPgVectorStore} from "./retrievers/pgvector-retrieval";
 import * as events from "node:events";
 import {Prisma, PrismaClient, Shoe, ShoeGender, ShoeReview} from "@prisma/client";
+import {ScoreThresholdRetriever} from "langchain/retrievers/score_threshold";
+import {applyRecencyBias} from "./retrievers/utils";
 
 events.EventEmitter.defaultMaxListeners = 1000;
 
@@ -431,15 +433,13 @@ async function retrieve(
     }
 
     // Perform similarity search
-    let docs = await vectorStore.similaritySearch(query, 10);
+    let docs = await ScoreThresholdRetriever
+        .fromVectorStore(vectorStore, { minSimilarityScore: 0.2 })
+        .getRelevantDocuments(query);
 
     // Apply recency bias if configured
     if (configuration.recencyWeight > 0) {
-        if (configuration.retrieverProvider === "pgvector") {
-            docs = await pgApplyRecencyBias(docs, configuration.recencyWeight);
-        } else {
-            docs = await applyRecencyBias(docs, configuration.recencyWeight);
-        }
+        docs = applyRecencyBias(docs, configuration.recencyWeight);
     }
 
     return {retrievedDocs: docs};
@@ -552,9 +552,6 @@ const builder = new StateGraph(
 
 // Finally, we compile it!
 // This compiles it into a graph you can invoke and deploy.
-export const graph = builder.compile({
-    interruptBefore: [], // if you want to update the state before calling the tools
-    interruptAfter: [],
-});
+export const graph = builder.compile({});
 
 graph.name = "Wide Toe Box Graph"; // Customizes the name displayed in LangSmith

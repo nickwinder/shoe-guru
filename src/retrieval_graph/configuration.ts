@@ -68,7 +68,7 @@ export function ensureIndexConfiguration(
   return {
     embeddingModel:
       configurable.embeddingModel || "openai/text-embedding-3-small",
-    retrieverProvider: configurable.retrieverProvider || "local-file",
+    retrieverProvider: configurable.retrieverProvider || "pgvector",
     documentPaths: configurable.documentPaths || ["/Users/nickwinder/Downloads/reviews"],
     sitemapUrls: configurable.sitemapUrls || ["https://barefootrunreview.com/post-sitemap.xml"],
     searchKwargs: configurable.searchKwargs || {},
