@@ -29,8 +29,8 @@ const BasicShoeInfoSchema = z.object({
 
 // Shoe specifications schema
 const ShoeSpecificationsSchema = z.object({
-    stackHeightMm: z.number().nullable().describe("The stack height of the shoe in millimeters"),
-    heelToToeDropMm: z.number().nullable().describe("The heel-to-toe drop of the shoe in millimeters"),
+    forefootStackHeightMm: z.number().nullable().describe("The forefoot stack height of the shoe in millimeters"),
+    heelStackHeightMm: z.number().nullable().describe("The heel stack height of the shoe in millimeters"),
     width: z.string().nullable().describe("The width of the shoe (e.g., narrow, standard, wide)"),
     depth: z.string().nullable().describe("The depth of the shoe (e.g., low, medium, high)")
 });
@@ -118,7 +118,7 @@ The model name should not include the gender the shoe is made for.`,
  * Extract shoe specifications from HTML content using an LLM
  * @param html The HTML content to extract data from
  * @param modelName The name of the LLM model to use (default: 'openai/gpt-4o-mini')
- * @returns Shoe specifications (stackHeightMm, heelToToeDropMm, width, depth)
+ * @returns Shoe specifications (forefootStackHeightMm, heelStackHeightMm, width, depth)
  */
 async function extractShoeSpecifications(
     html: string,
@@ -139,14 +139,15 @@ async function extractShoeSpecifications(
 Your task is to analyze the HTML and identify the technical specifications of the shoe.
 
 Extract:
-1. Stack height in millimeters
-2. Heel-to-toe drop in millimeters
+1. Forefoot stack height in millimeters
+2. Heel stack height in millimeters
 3. Width (e.g., narrow, standard, wide)
 4. Depth (e.g., low, medium, high)
 
 IMPORTANT: Be thorough and accurate. Focus only on identifying the correct specifications.
 If a piece of information is not available or you are uncertain about its value, you MUST return null for that field.
-For numeric fields like stack height and heel-to-toe drop, only provide a value if you can find a specific number in the content. Otherwise, return null.`
+For numeric fields like forefoot stack height and heel stack height, only provide a value if you can find a specific number in the content. Otherwise, return null.
+Note: If you only find a single stack height value without specifying forefoot or heel, try to determine which it is. If you find a drop value and one of the stack heights, you can calculate the other.`
             },
             {
                 role: "user",
@@ -379,7 +380,7 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
             console.log(`Processing: ${brand} ${model}`);
 
             // Extract all data
-            const {stackHeightMm, heelToToeDropMm, width, depth} = specifications;
+            const {forefootStackHeightMm, heelStackHeightMm, width, depth} = specifications;
             const {previousModel, nextModel, changes, releaseDate, gender, intendedUse, price, weightGrams, url} = version;
 
             // Parse the release date string to a Date object if it exists
@@ -392,8 +393,8 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
                 },
                 update: {
                     // Update spec fields
-                    stackHeightMm: nullStringToUndefined(stackHeightMm),
-                    heelToToeDropMm: nullStringToUndefined(heelToToeDropMm),
+                    forefootStackHeightMm: nullStringToUndefined(forefootStackHeightMm),
+                    heelStackHeightMm: nullStringToUndefined(heelStackHeightMm),
                     width: nullStringToUndefined(width),
                     depth: nullStringToUndefined(depth),
 
@@ -409,8 +410,8 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
                     brand,
 
                     // Create spec fields
-                    stackHeightMm: nullStringToUndefined(stackHeightMm),
-                    heelToToeDropMm: nullStringToUndefined(heelToToeDropMm),
+                    forefootStackHeightMm: nullStringToUndefined(forefootStackHeightMm),
+                    heelStackHeightMm: nullStringToUndefined(heelStackHeightMm),
                     width: nullStringToUndefined(width),
                     depth: nullStringToUndefined(depth),
 

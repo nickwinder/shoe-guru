@@ -20,10 +20,10 @@ model Shoe {
   createdAt DateTime @default(now())
 
   // Fields from ShoeSpec
-  stackHeightMm   Int?
-  heelToToeDropMm Int?
-  width           String? // e.g., "narrow", "standard", "wide"
-  depth           String? // e.g., "low", "medium", "high"
+  forefootStackHeightMm Int?
+  heelStackHeightMm     Int?
+  width                 String? // e.g., "narrow", "standard", "wide"
+  depth                 String? // e.g., "low", "medium", "high"
 
   // Fields from ShoeVersion
   intendedUse   String? // e.g., "road", "trail", "race"

@@ -55,9 +55,11 @@ describe("Shoe Scraper", () => {
                 // Verify that we have specifications
                 expect(superiorShoe.specifications).toBeDefined();
 
-                // Altra is known for zero drop shoes
-                if (superiorShoe.specifications.heelToToeDropMm !== null) {
-                    expect(superiorShoe.specifications.heelToToeDropMm).toBe(0);
+                // Altra is known for zero drop shoes (forefoot and heel stack heights are equal)
+                if (superiorShoe.specifications.forefootStackHeightMm !== null && 
+                    superiorShoe.specifications.heelStackHeightMm !== null) {
+                    expect(superiorShoe.specifications.forefootStackHeightMm)
+                        .toBe(superiorShoe.specifications.heelStackHeightMm);
                 }
 
                 // Verify price if available
@@ -72,10 +74,16 @@ describe("Shoe Scraper", () => {
                     expect(superiorShoe.version.weightGrams).toBeGreaterThan(0);
                 }
 
-                // Verify stack height if available
-                if (superiorShoe.specifications.stackHeightMm !== null) {
-                    expect(typeof superiorShoe.specifications.stackHeightMm).toBe('number');
-                    expect(superiorShoe.specifications.stackHeightMm).toBeGreaterThan(0);
+                // Verify forefoot stack height if available
+                if (superiorShoe.specifications.forefootStackHeightMm !== null) {
+                    expect(typeof superiorShoe.specifications.forefootStackHeightMm).toBe('number');
+                    expect(superiorShoe.specifications.forefootStackHeightMm).toBeGreaterThan(0);
+                }
+
+                // Verify heel stack height if available
+                if (superiorShoe.specifications.heelStackHeightMm !== null) {
+                    expect(typeof superiorShoe.specifications.heelStackHeightMm).toBe('number');
+                    expect(superiorShoe.specifications.heelStackHeightMm).toBeGreaterThan(0);
                 }
 
                 // Log the extracted data for verification
@@ -85,8 +93,13 @@ describe("Shoe Scraper", () => {
                 console.log(`- Price: ${superiorShoe.version.price}`);
                 console.log('- Specifications:');
                 console.log(`  - Weight: ${superiorShoe.version.weightGrams} grams`);
-                console.log(`  - Stack Height: ${superiorShoe.specifications.stackHeightMm} mm`);
-                console.log(`  - Heel-to-Toe Drop: ${superiorShoe.specifications.heelToToeDropMm} mm`);
+                console.log(`  - Forefoot Stack Height: ${superiorShoe.specifications.forefootStackHeightMm} mm`);
+                console.log(`  - Heel Stack Height: ${superiorShoe.specifications.heelStackHeightMm} mm`);
+                if (superiorShoe.specifications.forefootStackHeightMm !== null && 
+                    superiorShoe.specifications.heelStackHeightMm !== null) {
+                    const drop = superiorShoe.specifications.heelStackHeightMm - superiorShoe.specifications.forefootStackHeightMm;
+                    console.log(`  - Drop: ${drop} mm`);
+                }
                 console.log(`  - Width: ${superiorShoe.specifications.width}`);
                 console.log(`  - Depth: ${superiorShoe.specifications.depth}`);
 

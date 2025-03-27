@@ -152,16 +152,22 @@ export default function ShoesPage() {
                         <span className="font-medium">{shoe.ShoeGender[0]?.weightGrams}g</span>
                       </div>
                     )}
-                    {shoe.stackHeightMm !== null && (
+                    {shoe.forefootStackHeightMm !== null && (
                       <div className="text-center">
-                        <span className="block text-sm text-neutral-500">Stack</span>
-                        <span className="font-medium">{shoe.stackHeightMm}mm</span>
+                        <span className="block text-sm text-neutral-500">Forefoot</span>
+                        <span className="font-medium">{shoe.forefootStackHeightMm}mm</span>
                       </div>
                     )}
-                    {shoe.heelToToeDropMm !== null && (
+                    {shoe.heelStackHeightMm !== null && (
+                      <div className="text-center">
+                        <span className="block text-sm text-neutral-500">Heel</span>
+                        <span className="font-medium">{shoe.heelStackHeightMm}mm</span>
+                      </div>
+                    )}
+                    {shoe.forefootStackHeightMm !== null && shoe.heelStackHeightMm !== null && (
                       <div className="text-center">
                         <span className="block text-sm text-neutral-500">Drop</span>
-                        <span className="font-medium">{shoe.heelToToeDropMm}mm</span>
+                        <span className="font-medium">{shoe.heelStackHeightMm - shoe.forefootStackHeightMm}mm</span>
                       </div>
                     )}
                   </div>

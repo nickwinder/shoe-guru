@@ -98,16 +98,22 @@ export default async function ShoeDetailsPage({
                     <h2 className="text-xl font-semibold mb-4">Specifications</h2>
                     <div
                         className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-neutral-50 p-6 rounded-lg border border-neutral-200">
-                        {shoe.stackHeightMm !== null && (
+                        {shoe.forefootStackHeightMm !== null && (
                             <div className="text-center p-3 bg-white rounded-lg shadow-sm">
-                                <span className="block text-sm text-neutral-500 mb-1">Stack Height</span>
-                                <span className="font-semibold text-lg">{shoe.stackHeightMm}mm</span>
+                                <span className="block text-sm text-neutral-500 mb-1">Forefoot Stack</span>
+                                <span className="font-semibold text-lg">{shoe.forefootStackHeightMm}mm</span>
                             </div>
                         )}
-                        {shoe.heelToToeDropMm !== null && (
+                        {shoe.heelStackHeightMm !== null && (
+                            <div className="text-center p-3 bg-white rounded-lg shadow-sm">
+                                <span className="block text-sm text-neutral-500 mb-1">Heel Stack</span>
+                                <span className="font-semibold text-lg">{shoe.heelStackHeightMm}mm</span>
+                            </div>
+                        )}
+                        {shoe.forefootStackHeightMm !== null && shoe.heelStackHeightMm !== null && (
                             <div className="text-center p-3 bg-white rounded-lg shadow-sm">
                                 <span className="block text-sm text-neutral-500 mb-1">Drop</span>
-                                <span className="font-semibold text-lg">{shoe.heelToToeDropMm}mm</span>
+                                <span className="font-semibold text-lg">{shoe.heelStackHeightMm - shoe.forefootStackHeightMm}mm</span>
                             </div>
                         )}
                         {shoe.width && (

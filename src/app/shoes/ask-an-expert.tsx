@@ -1,9 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { graph } from '../../retrieval_graph/graph';
-import {HumanMessage} from "@langchain/core/messages";
-import {getMessageText} from "../../retrieval_graph/utils";
+import ReactMarkdown from 'react-markdown';
 
 export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: string }) {
   const [query, setQuery] = useState(initialQuery);
@@ -19,21 +17,24 @@ export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: st
     setResponse('');
 
     try {
-      // Create a user message with the query
-      const userMessage = new HumanMessage(query)
-
-      // Invoke the graph with the user message
-      const result = await graph.invoke({ 
-        messages: [userMessage]
+      // Make a POST request to the API endpoint
+      const response = await fetch('/api/ask-expert', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query }),
       });
 
-      // Extract the assistant's response from the result
-      // The response is the last message in the messages array
-      const messages = result.messages;
-      const assistantResponse = messages[messages.length - 1];
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Parse the response JSON
+      const data = await response.json();
 
       // Set the response text
-      setResponse(getMessageText(assistantResponse));
+      setResponse(data.response);
     } catch (error) {
       console.error("Error asking the expert:", error);
       setResponse("Sorry, I couldn't get an answer at this time. Please try again later.");
@@ -150,9 +151,8 @@ export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: st
 
       {response && (
         <div className="mt-6 p-4 bg-neutral-50 rounded-lg border border-neutral-200">
-          <h3 className="text-lg font-medium mb-2">Expert Response:</h3>
           <div className="prose max-w-none">
-            {response}
+            <ReactMarkdown>{response}</ReactMarkdown>
           </div>
         </div>
       )}

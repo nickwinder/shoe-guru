@@ -1,6 +1,6 @@
 import {HNSWLib} from "@langchain/community/vectorstores/hnswlib";
 import {RunnableConfig} from "@langchain/core/runnables";
-import {ensureConfiguration} from "./configuration.js";
+import {ensureConfiguration} from "./configuration";
 import {Embeddings} from "@langchain/core/embeddings";
 import {OpenAIEmbeddings} from "@langchain/openai";
 import {Document} from "@langchain/core/documents";

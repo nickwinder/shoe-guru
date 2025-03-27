@@ -1,11 +1,8 @@
-/**
- * Define the configurable parameters for the agent.
- */
 import { RunnableConfig } from "@langchain/core/runnables";
 import {
   RESPONSE_SYSTEM_PROMPT_TEMPLATE,
   QUERY_SYSTEM_PROMPT_TEMPLATE,
-} from "./prompts.js";
+} from "./prompts";
 import { Annotation } from "@langchain/langgraph";
 
 /**
@@ -77,7 +74,7 @@ export function ensureIndexConfiguration(
       configurable.embeddingModel || "openai/text-embedding-3-small",
     retrieverProvider: configurable.retrieverProvider || "local-file",
     documentPaths: configurable.documentPaths || ["/Users/nickwinder/Downloads/reviews"],
-    sitemapUrls: configurable.sitemapUrls || [],
+    sitemapUrls: configurable.sitemapUrls || ["https://barefootrunreview.com/post-sitemap.xml"],
     searchKwargs: configurable.searchKwargs || {},
     recencyWeight: configurable.recencyWeight !== undefined ? configurable.recencyWeight : 0.3,
   };
