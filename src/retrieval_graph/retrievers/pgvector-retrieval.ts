@@ -5,9 +5,9 @@ import {OpenAIEmbeddings} from "@langchain/openai";
 import {PGVectorStore} from "@langchain/community/vectorstores/pgvector";
 import {fetchUrl, fetchUrlContent, parseSitemap} from "./utils";
 import crypto from "crypto";
-import {DocumentInterface} from "@langchain/core/documents";
 
 const TABLE_NAME = 'brr_embedding';
+const OPENAI_SMALL_EMBEDDINGS_DIMENSIONS = 1536;
 
 /**
  * Makes an embedding model based on the model name.
@@ -102,8 +102,12 @@ export async function ingestDocuments(
                 contentColumnName: "pageContent",
                 metadataColumnName: "metadata",
             },
+            dimensions: OPENAI_SMALL_EMBEDDINGS_DIMENSIONS,
+            distanceStrategy: "cosine"
         }
     );
+
+    await vectorStore.createHnswIndex({ dimensions: OPENAI_SMALL_EMBEDDINGS_DIMENSIONS })
 
     // Process each sitemap URL
     for (const sitemapUrl of configuration.sitemapUrls || []) {

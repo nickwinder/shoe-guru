@@ -154,8 +154,6 @@ Extract only the parameters that are explicitly mentioned or implied in the quer
             {role: "user", content: query}
         ]);
 
-        console.log("Parsed search conditions:", JSON.stringify(searchConditions, null, 2));
-
         // Build Prisma query from the structured output
         let whereConditions: Prisma.ShoeWhereInput[] = [];
         const orderBy: any[] = [];
@@ -434,7 +432,7 @@ async function retrieve(
 
     // Perform similarity search
     let docs = await ScoreThresholdRetriever
-        .fromVectorStore(vectorStore, { minSimilarityScore: 0.2 })
+        .fromVectorStore(vectorStore, { minSimilarityScore: 0.3 })
         .getRelevantDocuments(query);
 
     // Apply recency bias if configured
