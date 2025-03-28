@@ -23,8 +23,9 @@ export const IndexConfigurationAnnotation = Annotation.Root({
    * Supported options:
    * - 'local-file' (HNSWLib)
    * - 'pgvector' (PostgreSQL with pgvector extension)
+   * - 'supabase' (Supabase with pgvector extension)
    */
-  retrieverProvider: Annotation<"local-file" | "pgvector">,
+  retrieverProvider: Annotation<"local-file" | "pgvector" | "supabase">,
 
   /**
    * Paths to document files or directories for the HNSWLib retriever.
@@ -68,7 +69,7 @@ export function ensureIndexConfiguration(
   return {
     embeddingModel:
       configurable.embeddingModel || "openai/text-embedding-3-small",
-    retrieverProvider: configurable.retrieverProvider || "pgvector",
+    retrieverProvider: configurable.retrieverProvider || "supabase",
     documentPaths: configurable.documentPaths || ["/Users/nickwinder/Downloads/reviews"],
     sitemapUrls: configurable.sitemapUrls || ["https://barefootrunreview.com/post-sitemap.xml"],
     searchKwargs: configurable.searchKwargs || {},

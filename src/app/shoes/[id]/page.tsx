@@ -1,6 +1,7 @@
 import {PrismaClient} from '@prisma/client';
 import Link from 'next/link';
 import {notFound} from 'next/navigation';
+import { prisma } from '../../../lib/prisma'
 
 export default async function ShoeDetailsPage({
                                                   params,
@@ -13,8 +14,6 @@ export default async function ShoeDetailsPage({
     if (isNaN(id)) {
         notFound();
     }
-
-    const prisma = new PrismaClient();
 
     const shoe = await prisma.shoe.findUnique({
         where: {

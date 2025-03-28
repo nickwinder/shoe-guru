@@ -1,6 +1,6 @@
 import {Document, DocumentInterface} from "@langchain/core/documents";
-import * as https from "node:https";
-import * as http from "node:http";
+import * as https from "https";
+import * as http from "http";
 import {HtmlToTextTransformer} from "@langchain/community/document_transformers/html_to_text";
 import {RecursiveCharacterTextSplitter} from "@langchain/textsplitters";
 import crypto from "crypto";

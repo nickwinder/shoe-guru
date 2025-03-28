@@ -1,9 +1,10 @@
 "use client";
 
 import Link from 'next/link';
+import Image from 'next/image';
 import AskExpertForm from './ask-an-expert';
 import { useState, useEffect } from 'react';
-import { Shoe, ShoeGender } from 'node_modules/@prisma/client/default';
+import { Shoe, ShoeGender, Image as ImageType } from 'node_modules/@prisma/client/default';
 
 // Function to fetch shoes data from the server
 async function getShoes() {
@@ -20,7 +21,7 @@ async function getShoes() {
 }
 
 export default function ShoesPage() {
-  const [shoes, setShoes] = useState<(Shoe & { ShoeGender: ShoeGender[] })[]>([]);
+  const [shoes, setShoes] = useState<(Shoe & { ShoeGender: (ShoeGender & { images: ImageType[] })[] })[]>([]);
   const [sortOption, setSortOption] = useState('Name (A-Z)');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -134,6 +135,25 @@ export default function ShoesPage() {
             {shoes.map((shoe) => (
               <div key={shoe.id} className="card p-6 flex flex-col h-full">
                 <div className="flex-1">
+                  {/* Image display */}
+                  <div className="mb-4 relative h-48 w-full overflow-hidden rounded-lg bg-neutral-100">
+                    {shoe.ShoeGender[0]?.images && shoe.ShoeGender[0]?.images.length > 0 ? (
+                      <Image
+                        src={`/api/images/${shoe.ShoeGender[0].images[0].id}`}
+                        alt={`${shoe.brand} ${shoe.model}`}
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        className="object-contain"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-neutral-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex justify-between items-start mb-2">
                     <h2 className="text-2xl font-semibold">{shoe.brand} {shoe.model}</h2>
                     {shoe.ShoeGender[0]?.price && (

@@ -1,7 +1,7 @@
 import { RunnableConfig } from "@langchain/core/runnables";
-import { ingestDocuments as ingestHNSWDocuments } from "./retrieval_graph/retrievers/retrieval.js";
-import { ingestDocuments as ingestPgVectorDocuments } from "./retrieval_graph/retrievers/pgvector-retrieval.js";
-import { ensureConfiguration } from "./retrieval_graph/configuration.js";
+import { ingestDocuments as ingestHNSWDocuments } from "./server/node/retrieval.js";
+import { ingestDocuments as ingestPgVectorDocuments } from "./server/node/pgvector-retrieval.js";
+import { ensureConfiguration } from "./app/api/lib/retrieval_graph/configuration.js";
 import dotenv from "dotenv";
 
 // Load environment variables from .env file

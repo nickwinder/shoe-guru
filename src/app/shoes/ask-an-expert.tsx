@@ -1,13 +1,17 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 
-export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: string }) {
-  const [query, setQuery] = useState(initialQuery);
-  const [response, setResponse] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+import { useCompletion } from '@ai-sdk/react';
+
+export default function AskExpertForm() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Use the useChat hook from the ai package to handle streaming
+  const { completion, input, setInput, handleInputChange, handleSubmit, isLoading } = useCompletion({
+    api: '/api/ask-expert',
+  });
 
   // Auto-resize textarea based on content
   useEffect(() => {
@@ -18,74 +22,16 @@ export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: st
       // Set the height to match the content
       textarea.style.height = `${textarea.scrollHeight}px`;
     }
-  }, [query]);
+  }, [input]);
 
   // Handle default question selection
   const handleDefaultQuestion = async (questionText: string) => {
-    setQuery(questionText);
+    // Set the input value to the selected question
+    setInput(questionText);
 
-    // Submit the question directly without relying on state update
-    if (questionText) {
-      setIsLoading(true);
-      setResponse('');
-
-      try {
-        const response = await fetch('/api/ask-expert', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ query: questionText }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        setResponse(data.response);
-      } catch (error) {
-        console.error("Error asking the expert:", error);
-        setResponse("Sorry, I couldn't get an answer at this time. Please try again later.");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!query) return;
-
-    setIsLoading(true);
-    setResponse('');
-
-    try {
-      // Make a POST request to the API endpoint
-      const response = await fetch('/api/ask-expert', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // Parse the response JSON
-      const data = await response.json();
-
-      // Set the response text
-      setResponse(data.response);
-    } catch (error) {
-      console.error("Error asking the expert:", error);
-      setResponse("Sorry, I couldn't get an answer at this time. Please try again later.");
-    } finally {
-      setIsLoading(false);
-    }
+    // Submit the form with the selected question
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+    await handleSubmit(fakeEvent);
   };
 
   return (
@@ -100,8 +46,8 @@ export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: st
             </div>
             <textarea
               ref={textareaRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              value={input}
+              onChange={handleInputChange}
               placeholder="Ask our shoe expert any question..."
               className="form-input pl-10 py-3 w-full min-h-[48px]"
               style={{
@@ -121,12 +67,11 @@ export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: st
             >
               {isLoading ? 'Thinking...' : '→'}
             </button>
-            {query && (
+            {input && (
               <button
                 type="button"
                 onClick={() => {
-                  setQuery('');
-                  setResponse('');
+                  setInput('');
                 }}
                 className="btn btn-outline py-2 px-2 sm:py-3 sm:px-3"
                 disabled={isLoading}
@@ -185,15 +130,15 @@ export default function AskExpertForm({ initialQuery = '' }: { initialQuery?: st
         </div>
       </div>
 
-      {response && (
+      {completion && (
         <div className="mt-6 p-4 bg-neutral-50 rounded-lg border border-neutral-200">
           <div className="prose max-w-none">
-            <ReactMarkdown>{response}</ReactMarkdown>
+            <ReactMarkdown>{completion}</ReactMarkdown>
           </div>
         </div>
       )}
 
-      {isLoading && (
+      {isLoading && !completion && (
         <div className="mt-6 p-4 bg-neutral-50 rounded-lg border border-neutral-200 text-center">
           <div className="animate-pulse">
             <p className="text-neutral-600">Our shoe expert is thinking...</p>

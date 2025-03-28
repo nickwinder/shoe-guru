@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {PrismaClient} from "@prisma/client";
+import { prisma } from 'src/lib/prisma'
 
 export async function GET(
   request: NextRequest,
@@ -8,8 +9,6 @@ export async function GET(
   const { params } = context;
   try {
     const id = parseInt(params.id);
-
-    const prisma = new PrismaClient();
 
     if (isNaN(id)) {
       return NextResponse.json(

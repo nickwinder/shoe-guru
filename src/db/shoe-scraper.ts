@@ -2,7 +2,7 @@ import axios from 'axios';
 import {PrismaClient} from '@prisma/client';
 import {initializeDatabase} from './init-db';
 import {z} from 'zod';
-import {loadChatModel} from "../retrieval_graph/utils";
+import {loadChatModel} from "../app/api/lib/retrieval_graph/utils";
 import Sitemapper from "sitemapper";
 import {convert} from "html-to-text";
 

@@ -4,16 +4,13 @@ import {ConfigurationAnnotation, ensureConfiguration,} from "./configuration";
 import {InputStateAnnotation, StateAnnotation} from "./state";
 import {formatDocs, getMessageText, loadChatModel} from "./utils";
 import {z} from "zod";
-import {getVectorStore as getHNSWVectorStore} from "./retrievers/retrieval";
-import {getVectorStore as getPgVectorStore} from "./retrievers/pgvector-retrieval";
-import * as events from "node:events";
-import {Prisma, PrismaClient, Shoe, ShoeGender, ShoeReview} from "@prisma/client";
+import {getVectorStore as getSupabaseVectorStore, applyRecencyBias} from "./retrievers/supabase-retrieval";
+import * as events from "events";
+import {Prisma, Shoe, ShoeGender, ShoeReview} from "@prisma/client";
 import {ScoreThresholdRetriever} from "langchain/retrievers/score_threshold";
-import {applyRecencyBias} from "./retrievers/utils";
+import { prisma } from 'src/lib/prisma'
 
 events.EventEmitter.defaultMaxListeners = 1000;
-
-const prisma = new PrismaClient();
 
 const SearchQuery = z.object({
     query: z.string().describe("Search the indexed documents for a query."),
@@ -423,11 +420,12 @@ async function retrieve(
 
     // Get the vector store based on the configured provider
     let vectorStore;
-    if (configuration.retrieverProvider === "pgvector") {
-        vectorStore = await getPgVectorStore(config);
+    if (configuration.retrieverProvider === "supabase") {
+        vectorStore = await getSupabaseVectorStore(config);
     } else {
         // Default to HNSWLib
-        vectorStore = await getHNSWVectorStore(config);
+        // vectorStore = await getHNSWVectorStore(config);
+        throw new Error("Unsupported retriever provider: " + configuration.retrieverProvider);
     }
 
     // Perform similarity search

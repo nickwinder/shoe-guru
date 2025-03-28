@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
 import {PrismaClient} from "@prisma/client";
+import { prisma } from 'src/lib/prisma'
 
 export async function GET(request: Request) {
   try {
     // Get the search query from the URL
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('query') || '';
-
-    const prisma = new PrismaClient();
 
     // Fetch shoes with their gender information
     const shoes = await prisma.shoe.findMany({
@@ -24,6 +23,9 @@ export async function GET(request: Request) {
         ShoeGender: {
           where: {
             gender: 'male',
+          },
+          include: {
+            images: true,
           }
         },
         reviews: true,
