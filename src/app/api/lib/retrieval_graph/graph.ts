@@ -4,11 +4,14 @@ import {ConfigurationAnnotation, ensureConfiguration,} from "./configuration";
 import {InputStateAnnotation, StateAnnotation} from "./state";
 import {formatDocs, getMessageText, loadChatModel} from "./utils";
 import {z} from "zod";
-import {getVectorStore as getSupabaseVectorStore, applyRecencyBias} from "./retrievers/supabase-retrieval";
+import {getVectorStore as getPgVectorStore} from "./retrievers/supabase-retrieval";
+import {getVectorStore as getSupabaseVectorStore} from "./retrievers/supabase-retrieval";
+import {getVectorStore as getMemoryVectorStore} from "./retrievers/retrieval";
 import * as events from "events";
 import {Prisma, Shoe, ShoeGender, ShoeReview} from "@prisma/client";
 import {ScoreThresholdRetriever} from "langchain/retrievers/score_threshold";
 import { prisma } from 'src/lib/prisma'
+import { applyRecencyBias } from 'src/app/api/lib/retrieval_graph/retrievers/utils'
 
 events.EventEmitter.defaultMaxListeners = 1000;
 
@@ -420,11 +423,13 @@ async function retrieve(
 
     // Get the vector store based on the configured provider
     let vectorStore;
-    if (configuration.retrieverProvider === "supabase") {
+    if (configuration.retrieverProvider === "pgvector") {
+        vectorStore = await getPgVectorStore(config);
+    } else if (configuration.retrieverProvider === "supabase") {
         vectorStore = await getSupabaseVectorStore(config);
+    } else if (configuration.retrieverProvider === "local-file") {
+        vectorStore = await getMemoryVectorStore(config)
     } else {
-        // Default to HNSWLib
-        // vectorStore = await getHNSWVectorStore(config);
         throw new Error("Unsupported retriever provider: " + configuration.retrieverProvider);
     }
 
@@ -523,7 +528,7 @@ async function respond(
         {role: "system", content: systemMessage},
         ...state.messages,
     ];
-    const response = await model.invoke(messageValue);
+    const response = await model.withConfig({ tags: ['respond'] }).invoke(messageValue);
     // We return a list, because this will get added to the existing list
     return {messages: [response]};
 }

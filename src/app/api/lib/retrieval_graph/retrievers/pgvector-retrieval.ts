@@ -1,5 +1,5 @@
 import {RunnableConfig} from "@langchain/core/runnables";
-import {ensureConfiguration} from "../../app/api/lib/retrieval_graph/configuration";
+import {ensureConfiguration} from "../configuration";
 import {Embeddings} from "@langchain/core/embeddings";
 import {OpenAIEmbeddings} from "@langchain/openai";
 import {PGVectorStore} from "@langchain/community/vectorstores/pgvector";

@@ -27,10 +27,37 @@ export async function POST(request: NextRequest) {
       // Stream the response
       const eventStream = graph.streamEvents(
         { messages: [new HumanMessage(prompt)] },
-        { version: "v2" }
+        { 
+          version: "v2",
+        }
       );
 
-      return LangChainAdapter.toDataStreamResponse(eventStream);
+      // Filter the event stream to only include events with the 'respond' tag
+      const filteredStream = new ReadableStream({
+        async start(controller) {
+          const reader = eventStream.getReader();
+
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+
+              if (done) {
+                controller.close();
+                break;
+              }
+
+              // Only pass through events with the 'respond' tag
+              if (value.tags && value.tags.includes('respond')) {
+                controller.enqueue(value);
+              }
+            }
+          } catch (error) {
+            controller.error(error);
+          }
+        }
+      });
+
+      return LangChainAdapter.toDataStreamResponse(filteredStream);
     }
   } catch (error) {
     console.error("Error asking the expert:", error);

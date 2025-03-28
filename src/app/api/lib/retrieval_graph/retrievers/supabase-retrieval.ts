@@ -9,57 +9,6 @@ import { DocumentInterface } from 'node_modules/@langchain/core/documents'
 const TABLE_NAME = 'brr_embeddings';
 
 /**
- * Reorders documents based on recency, giving a boost to more recent documents.
- *
- * @param docs - The documents to reorder
- * @param recencyWeight - The weight to give to recency (0-1)
- * @returns The reordered documents
- */
-function reorderDocumentsByRecency(
-  docs: DocumentInterface[],
-  recencyWeight: number
-): DocumentInterface[] {
-    if (recencyWeight <= 0 || docs.length <= 1) {
-        return docs;
-    }
-
-    // Clone the docs to avoid modifying the original array
-    const reorderedDocs = [...docs];
-
-    // Sort by date if available
-    reorderedDocs.sort((a, b) => {
-        // Get the dates from the metadata
-        const dateA = a.metadata.createdAt ? new Date(a.metadata.createdAt).getTime() : 0;
-        const dateB = b.metadata.createdAt ? new Date(b.metadata.createdAt).getTime() : 0;
-
-        // If both documents have dates, sort by date
-        if (dateA && dateB) {
-            return dateB - dateA; // Most recent first
-        }
-
-        // If only one document has a date, prioritize it
-        if (dateA) return -1;
-        if (dateB) return 1;
-
-        // If neither has a date, maintain original order
-        return 0;
-    });
-
-    return reorderedDocs;
-}
-
-/**
- * Applies recency bias to the search results.
- *
- * @param docs - The documents to reorder
- * @param recencyWeight - The weight to give to recency (0-1)
- * @returns The reordered documents
- */
-export function applyRecencyBias(docs: DocumentInterface[], recencyWeight: number): DocumentInterface[] {
-    return reorderDocumentsByRecency(docs, recencyWeight);
-}
-
-/**
  * Makes an embedding model based on the model name.
  *
  * @param modelName - The name of the embedding model

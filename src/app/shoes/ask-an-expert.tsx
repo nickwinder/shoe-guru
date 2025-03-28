@@ -1,12 +1,14 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 import { useCompletion } from '@ai-sdk/react';
 
 export default function AskExpertForm() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [questionHistory, setQuestionHistory] = useState<string[]>([]);
+  const [hasAskedQuestion, setHasAskedQuestion] = useState<boolean>(false);
 
   // Use the useChat hook from the ai package to handle streaming
   const { completion, input, setInput, handleInputChange, handleSubmit, isLoading } = useCompletion({
@@ -24,19 +26,36 @@ export default function AskExpertForm() {
     }
   }, [input]);
 
+  // Clear input field after receiving a response
+  useEffect(() => {
+    if (completion && !isLoading) {
+      setInput('');
+    }
+  }, [completion, isLoading, setInput]);
+
   // Handle default question selection
   const handleDefaultQuestion = async (questionText: string) => {
     // Set the input value to the selected question
     setInput(questionText);
+  };
 
-    // Submit the form with the selected question
-    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-    await handleSubmit(fakeEvent);
+  // Custom submit handler to track question history
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Only add to history if there's actual input
+    if (input.trim()) {
+      setQuestionHistory(prev => [...prev, input]);
+      setHasAskedQuestion(true);
+    }
+
+    // Call the original submit handler
+    handleSubmit(e);
   };
 
   return (
     <div>
-      <form onSubmit={handleSubmit} suppressHydrationWarning>
+      <form onSubmit={handleFormSubmit} suppressHydrationWarning>
         <div className="flex flex-row gap-2">
           <div className="relative flex-1">
             <div className="absolute top-0 left-0 pt-3 pl-3 pointer-events-none">
@@ -65,69 +84,80 @@ export default function AskExpertForm() {
               className="btn btn-primary py-2 px-3 sm:py-3 sm:px-6"
               disabled={isLoading}
             >
-              {isLoading ? 'Thinking...' : '→'}
+              →
             </button>
-            {input && (
-              <button
-                type="button"
-                onClick={() => {
-                  setInput('');
-                }}
-                className="btn btn-outline py-2 px-2 sm:py-3 sm:px-3"
-                disabled={isLoading}
-              >
-                Clear
-              </button>
-            )}
           </div>
         </div>
       </form>
 
-      {/* Default question buttons */}
+      {/* Conditionally show either common questions or question history */}
       <div className="mt-4">
-        <p className="text-sm text-neutral-500 mb-2">Common questions:</p>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => handleDefaultQuestion("What's the highest stack height zero drop shoe?")}
-            className="text-sm bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
-            disabled={isLoading}
-          >
-            What's the highest stack height zero drop shoe?
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDefaultQuestion("What's the widest trail shoe available?")}
-            className="text-sm bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
-            disabled={isLoading}
-          >
-            What's the widest trail shoe available?
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDefaultQuestion("Which shoes are best for flat feet runners?")}
-            className="text-sm bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
-            disabled={isLoading}
-          >
-            Which shoes are best for flat feet runners?
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDefaultQuestion("What are the most cushioned shoes for long distance running?")}
-            className="text-sm bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
-            disabled={isLoading}
-          >
-            What are the most cushioned shoes for long distance running?
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDefaultQuestion("Which shoes have the best grip for wet trail conditions?")}
-            className="text-sm bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
-            disabled={isLoading}
-          >
-            Which shoes have the best grip for wet trail conditions?
-          </button>
-        </div>
+        {!hasAskedQuestion ? (
+          /* Common questions - shown before any question is asked */
+          <>
+            <p className="text-sm text-neutral-500 mb-2">Common questions:</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => handleDefaultQuestion("What's the highest stack height zero drop shoe?")}
+                className="text-sm bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
+                disabled={isLoading}
+              >
+                What's the highest stack height zero drop shoe?
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDefaultQuestion("What's the widest trail shoe available?")}
+                className="text-sm bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
+                disabled={isLoading}
+              >
+                What's the widest trail shoe available?
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDefaultQuestion("Which shoes are best for flat feet runners?")}
+                className="text-sm bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
+                disabled={isLoading}
+              >
+                Which shoes are best for flat feet runners?
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDefaultQuestion("What are the most cushioned shoes for long distance running?")}
+                className="text-sm bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
+                disabled={isLoading}
+              >
+                What are the most cushioned shoes for long distance running?
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDefaultQuestion("Which shoes have the best grip for wet trail conditions?")}
+                className="text-sm bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
+                disabled={isLoading}
+              >
+                Which shoes have the best grip for wet trail conditions?
+              </button>
+            </div>
+          </>
+        ) : (
+          /* Question history - shown after at least one question has been asked */
+          <>
+            <p className="text-sm text-neutral-500 mb-2">Question history:</p>
+            <div className="flex flex-col gap-2">
+              {questionHistory.map((question, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => handleDefaultQuestion(question)}
+                  className="text-sm text-left bg-white border border-neutral-200 hover:border-primary-300 hover:bg-primary-50 px-3 py-1 rounded-full transition-colors"
+                  disabled={isLoading}
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {completion && (
