@@ -67,7 +67,7 @@ export default function AskExpertForm() {
               ref={textareaRef}
               value={input}
               onChange={handleInputChange}
-              placeholder="Ask our shoe expert any question..."
+              placeholder="Ask our shoe expert about Altra shoes..."
               className="form-input pl-10 py-3 w-full min-h-[48px]"
               style={{
                 resize: 'none',

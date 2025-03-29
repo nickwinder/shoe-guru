@@ -19,6 +19,9 @@
     "db:scrape": "npm run build:scraper && node dist/src/db/shoe-scraper.js",
     "db:scrape-images": "npm run build:scraper && node dist/src/db/shoe-image-scraper.js",
     "db:setup": "npm run build:scraper && node dist/src/db/index.js",
+    "db:remove-gender-terms": "npm run build:scraper && node dist/src/scripts/remove-gender-terms.js",
+    "db:list-shoes": "npm run build:scraper && node dist/src/scripts/list-shoes.js",
+    "db:list-shoes-with-info": "npm run build:scraper && node dist/src/scripts/list-shoes-with-info.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },

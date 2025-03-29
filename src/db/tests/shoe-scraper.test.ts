@@ -100,8 +100,6 @@ describe("Shoe Scraper", () => {
                     const drop = superiorShoe.specifications.heelStackHeightMm - superiorShoe.specifications.forefootStackHeightMm;
                     console.log(`  - Drop: ${drop} mm`);
                 }
-                console.log(`  - Width: ${superiorShoe.specifications.width}`);
-                console.log(`  - Depth: ${superiorShoe.specifications.depth}`);
 
                 if (superiorShoe.version) {
                     console.log('- Version Information:');

@@ -166,6 +166,7 @@ async function processShoeGender(shoeGender: any): Promise<void> {
   } catch (error) {
     console.error(`Error processing ShoeGender ${shoeGender.id}:`, error);
   }
+
 }
 
 /**

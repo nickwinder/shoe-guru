@@ -23,17 +23,15 @@ model Shoe {
   createdAt DateTime @default(now())
 
   // Fields from ShoeSpec
-  forefootStackHeightMm Int?
-  heelStackHeightMm     Int?
-  width                 String? // e.g., "narrow", "standard", "wide"
-  depth                 String? // e.g., "low", "medium", "high"
+  forefootStackHeightMm Int
+  heelStackHeightMm     Int
+  dropMm                Int
+  fit                   String // e.g., "slim", "standard", "original"
+  wideOption            Boolean // e.g., "wide", "narrow"
+  description           String
 
   // Fields from ShoeVersion
-  intendedUse   String? // e.g., "road", "trail", "race"
-  previousModel String?
-  nextModel     String?
-  changes       String?
-  releaseDate   DateTime?
+  intendedUse String? // e.g., "road", "trail", "race"
 
   // Relations
   ShoeGender ShoeGender[]
@@ -57,7 +55,8 @@ model ShoeGender {
   shoeId      Int
   gender      String
   url         String
-  weightGrams Int?
+  weightGrams Int
+  priceRRP    Decimal
   price       Decimal?
   images      Image[]
 

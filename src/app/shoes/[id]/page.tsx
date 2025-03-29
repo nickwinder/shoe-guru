@@ -66,30 +66,12 @@ export default async function ShoeDetailsPage({
                             {shoe.intendedUse.charAt(0).toUpperCase() + shoe.intendedUse.slice(1)}
                         </span>
                     )}
-                    {shoe.releaseDate && (
-                        <span
-                            className="bg-secondary-100 text-secondary-800 px-3 py-1 rounded-full text-sm font-medium">
-                            Released: {new Date(shoe.releaseDate).toLocaleDateString()}
-                        </span>
-                    )}
-                    {shoe.previousModel && (
-                        <span
-                            className="bg-secondary-100 text-secondary-800 px-3 py-1 rounded-full text-sm font-medium">
-                            Previous: {shoe.previousModel}
-                        </span>
-                    )}
-                    {shoe.nextModel && (
-                        <span
-                            className="bg-secondary-100 text-secondary-800 px-3 py-1 rounded-full text-sm font-medium">
-                            Next: {shoe.nextModel}
-                        </span>
-                    )}
                 </div>
 
-                {shoe.changes && (
+                {shoe.description && (
                     <div className="mb-8 bg-neutral-50 border border-neutral-200 rounded-lg p-6">
-                        <h2 className="text-xl font-semibold mb-3">Changes from previous version</h2>
-                        <p className="whitespace-pre-line text-neutral-700">{shoe.changes}</p>
+                        <h2 className="text-xl font-semibold mb-3">Description</h2>
+                        <p className="whitespace-pre-line text-neutral-700">{shoe.description}</p>
                     </div>
                 )}
 
@@ -97,36 +79,26 @@ export default async function ShoeDetailsPage({
                     <h2 className="text-xl font-semibold mb-4">Specifications</h2>
                     <div
                         className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-neutral-50 p-6 rounded-lg border border-neutral-200">
-                        {shoe.forefootStackHeightMm !== null && (
-                            <div className="text-center p-3 bg-white rounded-lg shadow-sm">
-                                <span className="block text-sm text-neutral-500 mb-1">Forefoot Stack</span>
-                                <span className="font-semibold text-lg">{shoe.forefootStackHeightMm}mm</span>
-                            </div>
-                        )}
-                        {shoe.heelStackHeightMm !== null && (
-                            <div className="text-center p-3 bg-white rounded-lg shadow-sm">
-                                <span className="block text-sm text-neutral-500 mb-1">Heel Stack</span>
-                                <span className="font-semibold text-lg">{shoe.heelStackHeightMm}mm</span>
-                            </div>
-                        )}
-                        {shoe.forefootStackHeightMm !== null && shoe.heelStackHeightMm !== null && (
-                            <div className="text-center p-3 bg-white rounded-lg shadow-sm">
-                                <span className="block text-sm text-neutral-500 mb-1">Drop</span>
-                                <span className="font-semibold text-lg">{shoe.heelStackHeightMm - shoe.forefootStackHeightMm}mm</span>
-                            </div>
-                        )}
-                        {shoe.width && (
-                            <div className="text-center p-3 bg-white rounded-lg shadow-sm">
-                                <span className="block text-sm text-neutral-500 mb-1">Width</span>
-                                <span className="font-semibold text-lg">{shoe.width}</span>
-                            </div>
-                        )}
-                        {shoe.depth && (
-                            <div className="text-center p-3 bg-white rounded-lg shadow-sm">
-                                <span className="block text-sm text-neutral-500 mb-1">Depth</span>
-                                <span className="font-semibold text-lg">{shoe.depth}</span>
-                            </div>
-                        )}
+                        <div className="text-center p-3 bg-white rounded-lg shadow-sm">
+                            <span className="block text-sm text-neutral-500 mb-1">Forefoot Stack</span>
+                            <span className="font-semibold text-lg">{shoe.forefootStackHeightMm}mm</span>
+                        </div>
+                        <div className="text-center p-3 bg-white rounded-lg shadow-sm">
+                            <span className="block text-sm text-neutral-500 mb-1">Heel Stack</span>
+                            <span className="font-semibold text-lg">{shoe.heelStackHeightMm}mm</span>
+                        </div>
+                        <div className="text-center p-3 bg-white rounded-lg shadow-sm">
+                            <span className="block text-sm text-neutral-500 mb-1">Drop</span>
+                            <span className="font-semibold text-lg">{shoe.dropMm}mm</span>
+                        </div>
+                        <div className="text-center p-3 bg-white rounded-lg shadow-sm">
+                            <span className="block text-sm text-neutral-500 mb-1">Fit</span>
+                            <span className="font-semibold text-lg">{shoe.fit}</span>
+                        </div>
+                        <div className="text-center p-3 bg-white rounded-lg shadow-sm">
+                            <span className="block text-sm text-neutral-500 mb-1">Wide Option</span>
+                            <span className="font-semibold text-lg">{shoe.wideOption ? 'Yes' : 'No'}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -140,6 +112,16 @@ export default async function ShoeDetailsPage({
                                     <div className="space-y-3">
                                         {shoe.ShoeGender.filter(g => g.gender === "male").map((gender) => (
                                             <div key={gender.id} className="space-y-2">
+                                                {gender.priceRRP && (
+                                                    <div className="flex items-center">
+                                                        <span className="font-medium text-neutral-600 w-24">
+                                                            RRP:
+                                                        </span>
+                                                        <span className="text-neutral-800">
+                                                            ${gender.priceRRP.toString()}
+                                                        </span>
+                                                    </div>
+                                                )}
                                                 {gender.price && (
                                                     <div className="flex items-center">
                                                         <span className="font-medium text-neutral-600 w-24">
@@ -198,6 +180,16 @@ export default async function ShoeDetailsPage({
                                     <div className="space-y-3">
                                         {shoe.ShoeGender.filter(g => g.gender === "female").map((gender) => (
                                             <div key={gender.id} className="space-y-2">
+                                                {gender.priceRRP && (
+                                                    <div className="flex items-center">
+                                                        <span className="font-medium text-neutral-600 w-24">
+                                                            RRP:
+                                                        </span>
+                                                        <span className="text-neutral-800">
+                                                            ${gender.priceRRP.toString()}
+                                                        </span>
+                                                    </div>
+                                                )}
                                                 {gender.price && (
                                                     <div className="flex items-center">
                                                         <span className="font-medium text-neutral-600 w-24">
