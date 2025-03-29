@@ -146,23 +146,19 @@ async function processShoeGender(shoeGender: any): Promise<void> {
       const imageType = isHero ? 'hero' : 'outline';
 
       imageName = `${shoe.brand}_${shoe.model}_${shoeGender.gender}_${imageType}.png`;
+
+      // Store the image in the database with reference to ShoeGender
+      const image = await prisma.image.create({
+        data: {
+          name: imageName,
+          data: imageData,
+          shoeGenderId: shoeGender.id
+        }
+      });
+      console.log(`Saved image with ID ${image.id} for ShoeGender ${shoeGender.id}`);
     } else {
-      // Use a placeholder image
-      console.log(`No image found for ${shoe.brand} ${shoe.model}, using placeholder`);
-      imageData = await getPlaceholderImage();
-      imageName = `${shoe.brand}_${shoe.model}_${shoeGender.gender}_placeholder.png`;
+      console.log(`No image found for ${shoe.brand} ${shoe.model}, no image to upload`);
     }
-
-    // Store the image in the database with reference to ShoeGender
-    const image = await prisma.image.create({
-      data: {
-        name: imageName,
-        data: imageData,
-        shoeGenderId: shoeGender.id
-      }
-    });
-
-    console.log(`Saved image with ID ${image.id} for ShoeGender ${shoeGender.id}`);
   } catch (error) {
     console.error(`Error processing ShoeGender ${shoeGender.id}:`, error);
   }

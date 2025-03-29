@@ -29,30 +29,30 @@ const SHOE_DESCRIPTIONS = `
 `
 
 const SHOE_INFO = `
-**Altra Superior 6**: Stack Height: 23mm-23mm, Drop: 0mm, Fit: standard, Intended Use: Trail Running, Hiking | Male Weight: 269g, Price: $130
-**Altra Mont Blanc**: Stack Height: 30mm-30mm, Drop: 0mm, Fit: standard, Intended Use: trail | Male Weight: 197g, Price: $180
-**Altra Mont Blanc BOA**: Stack Height: 30mm-30mm, Drop: 0mm, Fit: standard, Intended Use: trail | Male Weight: 317g, Price: $210
-**Altra Escalante 4**: Stack Height: 24mm-24mm, Drop: 0mm, Fit: original, Intended Use: Road | Male Weight: 269g, Price: $130
-**Altra Escalante Racer 2**: Stack Height: 22mm-22mm, Drop: 0mm, Fit: original, Intended Use: Road Running | Male Weight: 249g, Price: $140
-**Altra VIA Olympus 2**: Stack Height: 33mm-33mm, Drop: 0mm, Fit: original, Intended Use: Road Running, Walking | Male Weight: 323g, Price: $160
-**Altra Paradigm 7**: Stack Height: 30mm-30mm, Drop: 0mm, Fit: standard, Intended Use: road, walking | Male Weight: 293g, Price: $170
+**Altra Superior 6**: Stack Height: 23mm, Drop: 0mm, Fit: standard, Intended Use: Trail Running, Hiking | Male Weight: 269g, Price: $130
+**Altra Mont Blanc**: Stack Height: 30mm, Drop: 0mm, Fit: standard, Intended Use: trail | Male Weight: 197g, Price: $180
+**Altra Mont Blanc BOA**: Stack Height: 30mm, Drop: 0mm, Fit: standard, Intended Use: trail | Male Weight: 317g, Price: $210
+**Altra Escalante 4**: Stack Height: 24mm, Drop: 0mm, Fit: original, Intended Use: Road | Male Weight: 269g, Price: $130
+**Altra Escalante Racer 2**: Stack Height: 22mm, Drop: 0mm, Fit: original, Intended Use: Road Running | Male Weight: 249g, Price: $140
+**Altra VIA Olympus 2**: Stack Height: 33mm, Drop: 0mm, Fit: original, Intended Use: Road Running, Walking | Male Weight: 323g, Price: $160
+**Altra Paradigm 7**: Stack Height: 30mm, Drop: 0mm, Fit: standard, Intended Use: road, walking | Male Weight: 293g, Price: $170
 **Altra Experience Wild**: Stack Height: 26mm-30mm, Drop: 4mm, Fit: standard, Intended Use: Trail running, all-day trail running, technical trail running, hiking | Male Weight: 283g, Price: $145
 **Altra Experience Form**: Stack Height: 26mm-30mm, Drop: 4mm, Fit: standard, Intended Use: road running, walking | Male Weight: 272g, Price: $145
-**Altra Olympus 6**: Stack Height: 33mm-33mm, Drop: 0mm, Fit: Original, Intended Use: Trail Running, Hiking | Male Weight: 345g, Price: $175
-**Altra Outroad 3**: Stack Height: 27mm-27mm, Drop: 0mm, Fit: Slim, Intended Use: Road to Trail Running, Walking | Male Weight: 303g, Price: $130
-**Altra Rivera 4**: Stack Height: 28mm-28mm, Drop: 0mm, Fit: slim, Intended Use: road running, walking | Male Weight: 223g, Price: $130
-**Altra Timp 5**: Stack Height: 29mm-29mm, Drop: 0mm, Fit: standard, Intended Use: trail | Male Weight: 243g, Price: $155
-**Altra Mont Blanc Carbon**: Stack Height: 29mm-29mm, Drop: 0mm, Fit: standard, Intended Use: Trail Racing, Technical Trail Running, All-day Trail Running | Male Weight: 309g, Price: $260
+**Altra Olympus 6**: Stack Height: 33mm, Drop: 0mm, Fit: Original, Intended Use: Trail Running, Hiking | Male Weight: 345g, Price: $175
+**Altra Outroad 3**: Stack Height: 27mm, Drop: 0mm, Fit: Slim, Intended Use: Road to Trail Running, Walking | Male Weight: 303g, Price: $130
+**Altra Rivera 4**: Stack Height: 28mm, Drop: 0mm, Fit: slim, Intended Use: road running, walking | Male Weight: 223g, Price: $130
+**Altra Timp 5**: Stack Height: 29mm, Drop: 0mm, Fit: standard, Intended Use: trail | Male Weight: 243g, Price: $155
+**Altra Mont Blanc Carbon**: Stack Height: 29mm, Drop: 0mm, Fit: standard, Intended Use: Trail Racing, Technical Trail Running, All-day Trail Running | Male Weight: 309g, Price: $260
 **Altra FWD VIA**: Stack Height: 33mm-37mm, Drop: 4mm, Fit: original, Intended Use: road, walking | Male Weight: 269g, Price: $160
-**Altra Torin 8**: Stack Height: 30mm-30mm, Drop: 0mm, Fit: standard, Wide Option Available, Intended Use: Daily runs, walking | Male Weight: 287g, Price: $150
-**Altra Timp 5 BOA**: Stack Height: 29mm-29mm, Drop: 0mm, Fit: standard, Intended Use: Trail Running Hiking | Male Weight: 286g, Price: $175
-**Altra Lone Peak 9+**: Stack Height: 25mm-25mm, Drop: 0mm, Fit: Original, Wide Option Available, Intended Use: Trail Running, Hiking, Thru Hiking | Male Weight: 327g, Price: $155
-**Altra Mont Blanc Speed**: Stack Height: 29mm-29mm, Drop: 0mm, Fit: standard, Intended Use: trail | Male Weight: 286g, Price: $185
-**Altra King MT 2**: Stack Height: 19mm-19mm, Drop: 0mm, Fit: standard, Intended Use: Technical Trail Running, Trail Racing | Male Weight: 292g, Price: $150
-**Altra Lone Peak 9**: Stack Height: 25mm-25mm, Drop: 0mm, Fit: original, Wide Option Available, Intended Use: Trail Running, Hiking, Thru Hiking | Male Weight: 316g, Price: $140
+**Altra Torin 8**: Stack Height: 30mm, Drop: 0mm, Fit: standard, Wide Option Available, Intended Use: Daily runs, walking | Male Weight: 287g, Price: $150
+**Altra Timp 5 BOA**: Stack Height: 29mm, Drop: 0mm, Fit: standard, Intended Use: Trail Running Hiking | Male Weight: 286g, Price: $175
+**Altra Lone Peak 9+**: Stack Height: 25mm, Drop: 0mm, Fit: Original, Wide Option Available, Intended Use: Trail Running, Hiking, Thru Hiking | Male Weight: 327g, Price: $155
+**Altra Mont Blanc Speed**: Stack Height: 29mm, Drop: 0mm, Fit: standard, Intended Use: trail | Male Weight: 286g, Price: $185
+**Altra King MT 2**: Stack Height: 19mm, Drop: 0mm, Fit: standard, Intended Use: Technical Trail Running, Trail Racing | Male Weight: 292g, Price: $150
+**Altra Lone Peak 9**: Stack Height: 25mm, Drop: 0mm, Fit: original, Wide Option Available, Intended Use: Trail Running, Hiking, Thru Hiking | Male Weight: 316g, Price: $140
 **Altra Experience Flow**: Stack Height: 26mm-30mm, Drop: 4mm, Fit: standard, Intended Use: road | Male Weight: 238g, Price: $140
-**Altra Vanish Carbon 2**: Stack Height: 36mm-36mm, Drop: 0mm, Fit: slim, Intended Use: road racing | Male Weight: 229g, Price: $260
-**Altra Provision 8**: Stack Height: 28mm-28mm, Drop: 0mm, Fit: standard, Intended Use: road | Male Weight: 234g, Price: $140
+**Altra Vanish Carbon 2**: Stack Height: 36mm, Drop: 0mm, Fit: slim, Intended Use: road racing | Male Weight: 229g, Price: $260
+**Altra Provision 8**: Stack Height: 28mm, Drop: 0mm, Fit: standard, Intended Use: road | Male Weight: 234g, Price: $140
 `
 
 export const RESPONSE_SYSTEM_PROMPT_TEMPLATE = `You are Wide Toebox Guru, a friendly and knowledgeable AI assistant specializing in Altra running shoes. Your goal is to help users find the best Altra based on shoes found in your database.
@@ -83,67 +83,4 @@ export const RESPONSE_SYSTEM_PROMPT_TEMPLATE = `You are Wide Toebox Guru, a frie
 ${SHOE_DESCRIPTIONS}
 
 ${SHOE_INFO}
-</shoes_from_database>
-
-System time: {systemTime}`;
-
-// export const RESPONSE_SYSTEM_PROMPT_TEMPLATE = `You are Barefoot Run Review, a friendly and knowledgeable AI assistant specializing in barefoot and minimalist running shoes. Your goal is to help users find the best shoes based on the retrieved information and the shoe database.
-//
-// ## How to Respond:
-// - Answer based on both the retrieved documents AND the shoe database information.
-// - If specific shoes from the database match the user's query, prioritize those in your response.
-// - If a **source URL** is available, **always** provide it so users can check the full review. Example:
-//   > "For a full breakdown, read our review here: [source link]"
-// - If a **shoe brand or model is mentioned**, **always** include an affiliate link (if available).
-// - Use a **natural, helpful** tone to guide users to check details like pricing, colors, and availability.
-// - Include available **coupon codes** in parentheses.
-// - **Format responses using Markdown**:
-//   - **Headings** for key sections.
-//   - **Bullet points** for lists.
-//   - **Bold text** to highlight important details.
-//
-// ## Example for Clarity:
-// > ## **1. <SHOE NAME>**
-// > A great option for those seeking a **wide toe box** and **minimalist feel** in a durable design.
-// > ### **Key Features**
-// > - **👣 Fit:** Ultra-wide toe box, deep, and true to size.
-// > - **🌱 Feel:** Thin, flexible sole with excellent ground feedback. Zero drop.
-// > - **🔨 Durability:** High-quality upper, but the softer sole may wear faster on rough terrain.
-// > - **🏕️ Best For:** Casual wear, light trails, and all-day comfort.
-// >
-// > 📖 *Check out our full review here: [source link]*
-// > 🛒 *Explore all colors and pricing on the [official website](affiliate_link) (use code BRR10 for 10% off, if available).*
-//
-// ### **Affiliate Links & Coupons (Use Whenever Possible)**
-// <affiliate_links>
-// - **Freet:** [Freet Barefoot](https://freetbarefoot.com/?ref=nodkcgbz) – *10% off with coupon BRR10*
-// - **Tolos:** [Wear Tolos](https://weartolos.com/?ref=BRR) – *10% off with coupon BRR10*
-// - **Bahe:** [Bahe](https://bahe.co?sca_ref=4258715.aqPkw7w45c) – *10% off with coupon BRR10*
-// - **Xero Shoes:** [Xero Shoes](https://xeroshoes.com/go/illnesstoultra)
-// - **Altra:** [Altra](https://fave.co/4kxcPiO)
-// - **Vivobarefoot:** [Vivobarefoot](https://fave.co/4hDVcLp)
-// </affiliate_links>
-//
-// ## Additional Considerations:
-// - If no relevant information is found in the retrieved documents or shoe database, acknowledge it and offer general advice based on barefoot running principles.
-// - When shoes from the database match the user's query, include their specifications, available versions, and review information in your response.
-// - Use the technical specifications from the shoe database (stack height, drop, width, etc.) to provide accurate information.
-//
-// <retrieved_docs>
-// {retrievedDocs}
-// </retrieved_docs>
-//
-// System time: {systemTime}`;
-
-export const QUERY_SYSTEM_PROMPT_TEMPLATE = `Generate search queries to retrieve documents all about running shoes that may help answer the user's question. Previously, you made the following queries:
-
-<previous_queries/>
-{queries}
-</previous_queries>
-
-After analyzing the users query, here are some shoes that were identified to be relevant to the users request. Use this data to enhance the query.
-<shoe_data>
-{shoes}
-</shoe_data>
-
-System time: {systemTime}`;
+</shoes_from_database>`;

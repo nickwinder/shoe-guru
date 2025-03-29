@@ -32,42 +32,4 @@ export const StateAnnotation = Annotation.Root({
      * @see https://langchain-ai.github.io/langgraphjs/reference/variables/langgraph.MessagesAnnotation.html
      */
     ...MessagesAnnotation.spec,
-
-    /**
-     * Stores the user queries.
-     * @type {string[]}
-     * @reducer A custom reducer function that appends new queries to the existing array.
-     *          It handles both single string and string array inputs.
-     * @default An empty array ([]).
-     * @description This annotation manages the list of user queries in the state.
-     *              It uses a reducer to add new queries while preserving existing ones.
-     *              The reducer supports adding either a single query (string) or multiple queries (string[]).
-     */
-    queries: Annotation<string[], string | string[]>({
-        reducer: (existing: string[], newQueries: string[] | string) => {
-            /**
-             * This reducer is currently "append only" - it only adds new queries to the existing list.
-             *
-             * To extend this reducer to support more complex operations, you could modify it in ways like this:
-             *
-             * reducer: (existing: string[], action: { type: string; payload: string | string[] }) => {
-             *   switch (action.type) {
-             *     case 'ADD':
-             *       return [...existing, ...(Array.isArray(action.payload) ? action.payload : [action.payload])];
-             *     case 'DELETE':
-             *       return existing.filter(query => query !== action.payload);
-             *     case 'REPLACE':
-             *       return Array.isArray(action.payload) ? action.payload : [action.payload];
-             *     default:
-             *       return existing;
-             *   }
-             * }
-             */
-            return [
-                ...existing,
-                ...(Array.isArray(newQueries) ? newQueries : [newQueries]),
-            ];
-        },
-        default: () => [],
-    }),
 });

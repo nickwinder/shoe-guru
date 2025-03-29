@@ -9,7 +9,8 @@ import { Shoe, ShoeGender, Image as ImageType } from 'node_modules/@prisma/clien
 // Function to fetch shoes data from the server
 async function getShoes() {
   try {
-    const response = await fetch('/api/shoes');
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/shoes`);
     if (!response.ok) {
       throw new Error('Failed to fetch shoes');
     }

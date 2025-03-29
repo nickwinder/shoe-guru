@@ -88,6 +88,10 @@ export default function AskExpertForm() {
             </button>
           </div>
         </div>
+        <div className="mt-2 text-xs text-neutral-500">
+          By submitting a question, you agree that your question may be stored and used by third parties. 
+          See our <a href="/legal/privacy-notice" className="text-primary-600 hover:underline">Privacy Notice</a> for details.
+        </div>
       </form>
 
       {/* Conditionally show either common questions or question history */}
@@ -162,6 +166,9 @@ export default function AskExpertForm() {
 
       {completion && (
         <div className="mt-6 p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+          <div className="text-xs text-neutral-500 mb-2 italic">
+            This response may contain affiliate links. We may earn a commission if you make a purchase through these links.
+          </div>
           <div className="prose max-w-none">
             <ReactMarkdown>{completion}</ReactMarkdown>
           </div>
