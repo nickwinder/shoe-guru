@@ -11,8 +11,7 @@ export default async function ShoeDetailsPage({ params }: { params: Promise<{ id
     notFound()
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const response = await fetch(`${baseUrl}/api/shoes/?id=${id}`)
+  const response = await fetch(`/api/shoes/?id=${id}`)
 
   if (!response.ok) {
     if (response.status === 404) {
