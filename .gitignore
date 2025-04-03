@@ -27,3 +27,5 @@ vector_store/
 .next
 .idea
 .junie
+
+.output.txt

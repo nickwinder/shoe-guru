@@ -12,7 +12,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  directUrl  = env("DIRECT_URL")
+  // directUrl  = env("DIRECT_URL")
   extensions = [pgvector(map: "vector")]
 }
 
@@ -58,6 +58,7 @@ model ShoeGender {
   weightGrams Int
   priceRRP    Decimal
   price       Decimal?
+  colors      String[]
   images      Image[]
 
   shoe Shoe @relation(fields: [shoeId], references: [id], onDelete: Cascade)

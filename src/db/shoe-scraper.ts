@@ -51,6 +51,7 @@ const ShoeGenderInfoSchema = z.object({
     price: z.number().nullable().describe("The current price of the shoe in numeric format (no currency symbol)"),
     priceRRP: z.number().nullable().describe("The recommended retail price (RRP) of the shoe in numeric format (no currency symbol)"),
     weightGrams: z.number().nullable().describe("The weight of the shoe in grams"),
+    colors: z.array(z.string()).nullable().describe("The available colors of the shoe"),
 });
 
 // Combined schema for backward compatibility
@@ -63,6 +64,7 @@ const BrandShoeDataSchema = z.object({
         price: z.number().nullable().describe("The current price of the shoe in numeric format (no currency symbol)"),
         priceRRP: z.number().nullable().describe("The recommended retail price (RRP) of the shoe in numeric format (no currency symbol)"),
         weightGrams: z.number().nullable().describe("The weight of the shoe in grams"),
+        colors: z.array(z.string()).nullable().describe("The available colors of the shoe"),
         intendedUse: z.string().nullable().describe('The intended use of the shoe e.g. road, trail'),
         previousModel: z.string().nullable().describe("The previous model name of the shoe"),
         nextModel: z.string().nullable().describe("The next model name of the shoe"),
@@ -214,12 +216,14 @@ Extract:
 2. Current price (as a number without currency symbols)
 3. Recommended Retail Price (RRP) (as a number without currency symbols)
 4. Weight in grams
+5. Available colors (as an array of strings)
 
 IMPORTANT: Be thorough and accurate. Focus only on identifying the correct gender-specific information.
 If a piece of information is not available or you are uncertain about its value, you MUST return null for that field.
 For numeric fields like price, RRP, and weight, only provide a value if you can find a specific number in the content. Otherwise, return null.
 For price information, look for both the current price (which may be discounted) and the original/recommended retail price (RRP).
-The current price is the price the shoe is currently being sold for, while the RRP is the original or full price before any discounts.`;
+The current price is the price the shoe is currently being sold for, while the RRP is the original or full price before any discounts.
+For colors, look for any mention of available color options and return them as an array of strings. If no color information is found, return null.`;
 
     return extractDataWithLLM(html, ShoeGenderInfoSchema, systemPrompt, "shoe gender information", modelName);
 }
@@ -300,18 +304,64 @@ export async function parseSitemap(
 }
 
 /**
+ * Filter an object to only include specified fields
+ * 
+ * @param obj The object to filter
+ * @param fieldsToUpdate Array of field names to include
+ * @param validFields Array of valid field names for this object
+ * @returns A new object with only the specified fields
+ */
+function filterObjectByFields<T extends Record<string, any>>(
+    obj: T, 
+    fieldsToUpdate: string[], 
+    validFields: string[]
+): Partial<T> {
+    const result: Partial<T> = {};
+
+    // Filter the fields to only include valid fields
+    const validFieldsToUpdate = fieldsToUpdate.filter(field => validFields.includes(field));
+
+    // Add only the specified fields to the result object
+    for (const field of validFieldsToUpdate) {
+        if (field in obj) {
+            result[field as keyof T] = obj[field as keyof T];
+        }
+    }
+
+    return result;
+}
+
+/**
  * Save shoe data to the database
  * 
  * @param shoeData The shoe data to save
+ * @param fieldsToUpdate Optional array of field names to update. If not provided, all fields will be updated.
  * @returns The saved shoe object
  * @throws Error if database operations fail
  */
-async function saveShoeToDatabase(shoeData: z.infer<typeof BrandShoeDataSchema>): Promise<{ shoeId: number, brand: string, model: string }> {
+async function saveShoeToDatabase(
+    shoeData: z.infer<typeof BrandShoeDataSchema>, 
+    fieldsToUpdate?: string[]
+): Promise<{ shoeId: number, brand: string, model: string } | null> {
     const { model, brand, specifications, version } = shoeData;
     const { forefootStackHeightMm, heelStackHeightMm, fit, wideOption, description } = specifications;
-    const { gender, intendedUse, price, priceRRP, weightGrams, url } = version;
+    const { gender, intendedUse, price, priceRRP, weightGrams, url, colors } = version;
 
     try {
+        // If fieldsToUpdate is provided, check if the shoe exists in the database
+        // If it doesn't exist, skip the scraping since we're only updating specific fields
+        if (fieldsToUpdate && fieldsToUpdate.length > 0) {
+            const existingShoe = await prisma.shoe.findUnique({
+                where: {
+                    model_brand: { model, brand },
+                },
+            });
+
+            if (!existingShoe) {
+                console.log(`Skipping ${brand} ${model} - shoe not found in database and only updating specific fields`);
+                return null;
+            }
+        }
         // Calculate drop from forefoot and heel stack heights
         let dropMm = undefined
         if (forefootStackHeightMm && heelStackHeightMm) {
@@ -319,7 +369,7 @@ async function saveShoeToDatabase(shoeData: z.infer<typeof BrandShoeDataSchema>)
         }
 
         // Prepare shoe data for database
-        const shoeData = {
+        const fullShoeData = {
             // Spec fields
             forefootStackHeightMm: forefootStackHeightMm || 0,
             heelStackHeightMm: heelStackHeightMm || 0,
@@ -332,26 +382,38 @@ async function saveShoeToDatabase(shoeData: z.infer<typeof BrandShoeDataSchema>)
             intendedUse: nullStringToUndefined(intendedUse),
         };
 
+        // Prepare gender data for database
+        const fullGenderData = {
+            price: nullStringToUndefined(price) || 0,
+            priceRRP: nullStringToUndefined(priceRRP) || nullStringToUndefined(price) || 0,
+            weightGrams: nullStringToUndefined(weightGrams) || 0,
+            colors: colors || [],
+            url
+        };
+
+        // If fieldsToUpdate is provided, filter the data objects to only include those fields
+        const updateShoeData = fieldsToUpdate 
+            ? filterObjectByFields(fullShoeData, fieldsToUpdate, ['forefootStackHeightMm', 'heelStackHeightMm', 'dropMm', 'fit', 'wideOption', 'description', 'intendedUse'])
+            : fullShoeData;
+
+        const updateGenderData = fieldsToUpdate
+            ? filterObjectByFields(fullGenderData, fieldsToUpdate, ['price', 'priceRRP', 'weightGrams', 'colors', 'url'])
+            : fullGenderData;
+
         // Create or update the shoe in the database
         const shoe = await prisma.shoe.upsert({
             where: {
                 model_brand: { model, brand },
             },
-            update: shoeData,
+            update: updateShoeData,
             create: {
                 model,
                 brand,
-                ...shoeData
+                ...fullShoeData // Always use full data for creation
             },
         });
 
-        // Prepare gender data for database
-        const genderData = {
-            price: nullStringToUndefined(price) || 0,
-            priceRRP: nullStringToUndefined(priceRRP) || nullStringToUndefined(price) || 0,
-            weightGrams: nullStringToUndefined(weightGrams) || 0,
-            url
-        };
+        console.log(`shoeId: ${shoe.id} - ${shoe.brand} ${shoe.model} - gender ${gender}`);
 
         // Create or update gender information
         await prisma.shoeGender.upsert({
@@ -361,11 +423,11 @@ async function saveShoeToDatabase(shoeData: z.infer<typeof BrandShoeDataSchema>)
                     gender,
                 }
             },
-            update: genderData,
+            update: updateGenderData,
             create: {
                 shoeId: shoe.id,
                 gender,
-                ...genderData
+                ...fullGenderData // Always use full data for creation
             }
         });
 
@@ -421,10 +483,14 @@ async function fetchHtmlContent(url: string): Promise<string> {
  * To use a different LLM model, modify the call to extractShoeDataWithLLM and specify the model name.
  * Example: extractShoeDataWithLLM(html, 'anthropic/claude-3-sonnet-20240229')
  *
+ * @param pagesToScrape Array of pages to scrape
+ * @param fieldsToUpdate Optional array of field names to update. If not provided, all fields will be updated.
  * @returns Object with success status and message
- * @param pagesToScrape
  */
-async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ success: boolean, message: string }> {
+async function scrapeShoeData(
+    pagesToScrape: Array<{ url: string }>,
+    fieldsToUpdate?: string[]
+): Promise<{ success: boolean, message: string }> {
     console.log('Starting shoe data scraping...');
 
     try {
@@ -446,10 +512,18 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
             console.log(`Processing: ${shoeData.brand} ${shoeData.model}`);
 
             // Save shoe data to database
-            const savedShoe = await saveShoeToDatabase(shoeData);
+            const savedShoe = await saveShoeToDatabase(shoeData, fieldsToUpdate);
 
-            console.log(`Saved shoe: ${savedShoe.shoeId} - ${savedShoe.brand} ${savedShoe.model}`);
-            console.log(`Saved version information for shoe: ${savedShoe.shoeId}`);
+            // If savedShoe is null, it means we skipped this shoe because it wasn't in the database
+            // and we were only updating specific fields
+            if (savedShoe) {
+                if (fieldsToUpdate && fieldsToUpdate.length > 0) {
+                    console.log(`Updated fields ${fieldsToUpdate.join(', ')} for shoe: ${savedShoe.shoeId} - ${savedShoe.brand} ${savedShoe.model}`);
+                } else {
+                    console.log(`Saved shoe: ${savedShoe.shoeId} - ${savedShoe.brand} ${savedShoe.model}`);
+                }
+                console.log(`Saved version information for shoe: ${savedShoe.shoeId}`);
+            }
         }
 
         console.log('Shoe data scraping completed successfully');
@@ -468,6 +542,8 @@ async function scrapeShoeData(pagesToScrape: Array<{ url: string }>): Promise<{ 
  * This function demonstrates how to use the sitemap parser to identify product pages
  * and pass them to the scraper.
  *
+ * You can specify which fields to update by passing them as command-line arguments:
+ * Example: node shoe-scraper.js --fields colors,price,weightGrams
  */
 async function main() {
     // First initialize the database
@@ -477,12 +553,19 @@ async function main() {
         console.error('Database initialization failed, cannot proceed with scraping');
         process.exit(1);
     }
+
+    // Parse command-line arguments to get fields to update
+    let fieldsToUpdate: string[] | undefined;
+    const fieldsArgIndex = process.argv.indexOf('--fields');
+    if (fieldsArgIndex !== -1 && fieldsArgIndex < process.argv.length - 1) {
+        fieldsToUpdate = process.argv[fieldsArgIndex + 1].split(',');
+        console.log(`Will only update the following fields: ${fieldsToUpdate.join(', ')}`);
+    }
+
     const sitemapUrl = "https://www.altrarunning.com/sitemap_0.xml";
 
     // If a sitemap URL is provided, parse it to get product pages
     console.log(`Using sitemap: ${sitemapUrl}`);
-
-    // Define patterns to identify product pages and their types
 
     // Define patterns to identify product pages and their types
     const productUrlPatterns = [
@@ -498,7 +581,7 @@ async function main() {
     }
 
     // Then scrape the data from the identified pages
-    const scrapeResult = await scrapeShoeData(pages);
+    const scrapeResult = await scrapeShoeData(pages, fieldsToUpdate);
 
     if (!scrapeResult.success) {
         console.error('Shoe data scraping failed');

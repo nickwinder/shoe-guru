@@ -24,19 +24,27 @@ async function main() {
     shoes.forEach(shoe => {
       // Find male gender data if available
       const maleData = shoe.ShoeGender.find(gender => 
-        gender.gender.toLowerCase().includes('men') || 
         gender.gender.toLowerCase().includes('male')
+      );
+      // Find male gender data if available
+      const femaleData = shoe.ShoeGender.find(gender =>
+          gender.gender.toLowerCase().includes('female')
       );
 
       // Format weight and price information
       const weightInfo = maleData ? `${maleData.weightGrams}g` : 'not given';
       const priceInfo = maleData ? `$${maleData.priceRRP}` : 'not given';
 
+      const mensColors = maleData ? maleData.colors : [];
+      const mensColorsString = mensColors.length > 0 ? `Mens Colors: ${mensColors.join(', ')}` : '';
+      const womensColors = femaleData ? femaleData.colors : [];
+      const womensColorsString = womensColors.length > 0 ? `Women's Colors: ${mensColors.join(', ')}` : '';
+
       // Format shoe specifications
       const shoeInfo = `Stack Height: ${shoe.forefootStackHeightMm}mm-${shoe.heelStackHeightMm}mm, Drop: ${shoe.dropMm}mm, Fit: ${shoe.fit}${shoe.wideOption ? ', Wide Option Available' : ''}${shoe.intendedUse ? `, Intended Use: ${shoe.intendedUse}` : ''}`;
 
       // Output formatted string
-      console.log(`**${shoe.brand} ${shoe.model}**: ${shoeInfo} | Male Weight: ${weightInfo}, Price: ${priceInfo}`);
+      console.log(`**${shoe.brand} ${shoe.model}**: ${shoeInfo} | Male Weight: ${weightInfo}, Price: ${priceInfo}, ${mensColorsString}, ${womensColorsString}`);
     });
 
   } catch (error) {
